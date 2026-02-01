@@ -119,9 +119,9 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Trade Value Rankings</h1>
-      <span class="tag">v1.3</span>
+      <span class="tag">v1.4</span>
     </div>
-    <p class="header-subtitle">Progressive trade values blending Watermark (75%) and RAT 365 (25%) — fixed league salary pool</p>
+    <p class="header-subtitle">Watermark (75%) + RAT 365 (25%) + Age Factor (±20%) — fixed league salary pool, progressive exponent</p>
   </div>
 </div>
 
@@ -154,6 +154,8 @@
       <option value="rat365-asc">RAT 365 ↑</option>
       <option value="salary-desc">Salary ↓</option>
       <option value="salary-asc">Salary ↑</option>
+      <option value="age-asc">Age ↑ (youngest)</option>
+      <option value="age-desc">Age ↓ (oldest)</option>
     </select>
   </div>
 </div>
@@ -171,6 +173,7 @@
       <tr>
         <th class="col-rank">#</th>
         <th>Player</th>
+        <th style="text-align:right">Age</th>
         <th style="text-align:right">RAT 365</th>
         <th style="text-align:right">Watermark</th>
         <th style="text-align:right">Salary</th>
@@ -187,25 +190,29 @@
     <h3>Methodology</h3>
     <p>Trade values are distributed from a <strong style="color:var(--text-primary)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
     <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating blends three components to smooth out single-season volatility and injury impact: <code>A)</code> Average RAT per game across all available seasons (up to 5 years), <code>B)</code> Average RAT per game over the last 3 seasons, and <code>C)</code> Average RAT per game in the current 2025-26 season. Components are only included if the player has data for that period. Hover over any Watermark value to see the breakdown.</p>
-    <p>The final Trade Value is a <strong style="color:var(--text-primary)">75/25 blend</strong>: 75% from the Watermark-based distribution and 25% from the RAT 365-based distribution. This ensures historical track record carries the most weight while still rewarding (or penalizing) current-season performance. Both distributions use an exponent of <code>1.322</code>, creating a progressive curve where elite production is rewarded exponentially.</p>
+    <p>The final Trade Value is a <strong style="color:var(--text-primary)">75/25 blend</strong>: 75% from the Watermark-based distribution and 25% from the RAT 365-based distribution. Both distributions use an exponent of <code>1.4</code>, creating a progressive curve where elite production is rewarded exponentially.</p>
+    <p>An <strong style="color:var(--text-primary)">age factor</strong> of <code>±20%</code> is then applied. The league average age serves as the neutral point — younger players receive up to a 20% bonus, older players up to a 20% penalty, scaling linearly. After the age adjustment, all values are renormalized so the total still equals the salary pool. Hover over any age to see the exact multiplier.</p>
     <div class="formula-block">
       <span class="step-label">Step 1</span>&nbsp; Watermark = avg( A: all-seasons RAT/g, B: last-3yr RAT/g, C: 2025-26 RAT/g )<br>
-      <span class="step-label">Step 2</span>&nbsp; TV<sub>WM</sub> = (max(Watermark,0)^1.322 ÷ Σ all WM scores) × Salary Pool<br>
-      <span class="step-label">Step 3</span>&nbsp; TV<sub>RAT</sub> = (max(RAT 365,0)^1.322 ÷ Σ all RAT scores) × Salary Pool<br>
-      <span class="step-label">Step 4</span>&nbsp; Trade Value = 75% × TV<sub>WM</sub> + 25% × TV<sub>RAT</sub>
+      <span class="step-label">Step 2</span>&nbsp; TV<sub>WM</sub> = (max(Watermark,0)^1.4 ÷ Σ all WM scores) × Pool<br>
+      <span class="step-label">Step 3</span>&nbsp; TV<sub>RAT</sub> = (max(RAT365,0)^1.4 ÷ Σ all RAT scores) × Pool<br>
+      <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 75% × TV<sub>WM</sub> + 25% × TV<sub>RAT</sub><br>
+      <span class="step-label">Step 5</span>&nbsp; Age Mult = 1 + 0.20 × (avg_age − player_age) ÷ max_deviation<br>
+      <span class="step-label">Step 6</span>&nbsp; Trade Value = normalize( TV<sub>blend</sub> × Age Mult ) to Pool
     </div>
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Trade Value Rankings v1.3 — Data fetched live from Google Sheets</div>
+<div class="footer">Hoopsmatic — NBA Trade Value Rankings v1.4 — Data fetched live from Google Sheets</div>
 
 <script>
 const SHEET_ID = '2PACX-1vSg6im6IYB6HXMGzQbmmBnLw9SfQLzxCSo8OfChxlJLhsB6BBCO0wPF_TMch0YgAbtFqYkwDWrsxRe7';
 const GID = '1310971167';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=${GID}&single=true&output=csv`;
-const EXPONENT = 1.322;
+const EXPONENT = 1.4;
 const WM_WEIGHT = 0.75;
 const RAT_WEIGHT = 0.25;
+const AGE_MAX_BONUS = 0.20;
 const RECENT_YEARS = new Set(['2023-24','2024-25','2025-26']);
 const CURRENT_YEAR = '2025-26';
 
@@ -235,11 +242,14 @@ function parseCSV(text) {
 function processData(rows) {
   const dataRows = rows.slice(1);
   const roster = [], historical = [];
+  let todayStr = null;
 
   for (const row of dataRows) {
-    while (row.length < 18) row.push('');
+    while (row.length < 20) row.push('');
+    // Grab today's date from col T (index 19)
+    if (row[19] && !todayStr) todayStr = row[19];
     if (row[0] && row[1]) {
-      roster.push({ team: row[0], player: row[1], rat365: parseFloat(row[2]) || 0, salary: parseInt(row[3].replace(/[$,]/g,'')) || 0 });
+      roster.push({ team: row[0], player: row[1], rat365: parseFloat(row[2]) || 0, salary: parseInt(row[3].replace(/[$,]/g,'')) || 0, birthday: row[4] || '' });
     }
     if (row[6] && row[7]) {
       const g = parseInt(row[9]) || 0;
@@ -271,20 +281,55 @@ function processData(rows) {
     p.watermark = comps.length > 0 ? comps.reduce((a,b) => a+b, 0) / comps.length : 0;
   }
 
+  // Parse today's date and calculate ages
+  function parseDate(s) {
+    if (!s) return null;
+    const parts = s.split('/');
+    if (parts.length === 3) return new Date(+parts[2], +parts[0]-1, +parts[1]);
+    return null;
+  }
+  const today = parseDate(todayStr) || new Date();
+  const ages = [];
+  for (const p of roster) {
+    const bd = parseDate(p.birthday);
+    if (bd) {
+      p.age = (today - bd) / (365.25 * 24 * 60 * 60 * 1000);
+      ages.push(p.age);
+    } else {
+      p.age = null;
+    }
+  }
+  const avgAge = ages.length > 0 ? ages.reduce((a,b) => a+b, 0) / ages.length : 26;
+  const maxDev = Math.max(...ages.map(a => Math.abs(a - avgAge)), 1);
+
+  // Age multiplier: linear ±20% from average age
+  for (const p of roster) {
+    if (p.age !== null) {
+      p.ageMult = 1 + AGE_MAX_BONUS * (avgAge - p.age) / maxDev;
+      p.ageMult = Math.max(1 - AGE_MAX_BONUS, Math.min(1 + AGE_MAX_BONUS, p.ageMult));
+    } else {
+      p.ageMult = 1.0;
+    }
+  }
+
+  // Trade value: 75/25 blend × age multiplier, then renormalize to pool
   const totalAdjWM = roster.reduce((s,p) => s + Math.pow(Math.max(p.watermark,0), EXPONENT), 0);
   const totalAdjRAT = roster.reduce((s,p) => s + Math.pow(Math.max(p.rat365,0), EXPONENT), 0);
   for (const p of roster) {
     const tvWM = (Math.pow(Math.max(p.watermark,0), EXPONENT) / totalAdjWM) * totalSalaryPool;
     const tvRAT = (Math.pow(Math.max(p.rat365,0), EXPONENT) / totalAdjRAT) * totalSalaryPool;
-    p.tvWM = tvWM;
-    p.tvRAT = tvRAT;
-    p.tradeValue = Math.round(WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT);
+    p.tvPreAge = WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT;
+    p.tvWithAge = p.tvPreAge * p.ageMult;
+  }
+  const totalWithAge = roster.reduce((s,p) => s + p.tvWithAge, 0);
+  for (const p of roster) {
+    p.tradeValue = Math.round((p.tvWithAge / totalWithAge) * totalSalaryPool);
     p.surplus = p.tradeValue - p.salary;
   }
   roster.sort((a,b) => b.tradeValue - a.tradeValue);
   roster.forEach((p,i) => p.rank = i+1);
 
-  return { players: roster, totalSalaryPool, exponent: EXPONENT };
+  return { players: roster, totalSalaryPool, exponent: EXPONENT, avgAge };
 }
 
 let appData = null;
@@ -300,8 +345,8 @@ function buildStats(d) {
   document.getElementById('statsBar').innerHTML = [
     {l:'Salary Pool',v:'$'+(d.totalSalaryPool/1e9).toFixed(2),u:'B'},
     {l:'Players Ranked',v:d.players.length,u:''},
-    {l:'Avg Watermark',v:avgWM.toFixed(2),u:''},
-    {l:'Blend',v:'75/25',u:' WM / RAT 365'}
+    {l:'Avg Age',v:d.avgAge.toFixed(1),u:' yrs'},
+    {l:'Formula',v:'75/25',u:' + ±20% age'}
   ].map(s=>`<div class="stat-card"><div class="label">${s.l}</div><div class="value">${s.v}<span class="unit">${s.u}</span></div></div>`).join('');
 }
 
@@ -319,6 +364,7 @@ function renderTable(players) {
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
       <td class="col-rank ${rankCls(p.rank)}">${p.rank}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
+      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span></div></td>
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}</td>
       <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}<div class="wm-tooltip"><span class="tt-label">5-yr avg/g:</span> <span class="tt-val">${p.avg5yr.toFixed(2)}</span><br><span class="tt-label">3-yr avg/g:</span> <span class="tt-val">${p.avg3yr.toFixed(2)}</span><br><span class="tt-label">2025-26/g:</span> <span class="tt-val">${p.avgCurrent.toFixed(2)}</span></div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
@@ -339,7 +385,13 @@ function update() {
     return true;
   });
   const dir = sortDir==='desc'?-1:1;
-  f.sort((a,b) => (a[sortKey]-b[sortKey])*dir);
+  f.sort((a,b) => {
+    const av = a[sortKey], bv = b[sortKey];
+    if (av === null && bv === null) return 0;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    return (av - bv) * dir;
+  });
   renderTable(f);
 }
 
