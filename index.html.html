@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA Trade Value Rankings — Hoopsmatic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #0a0e17;
+    --bg-secondary: #111827;
+    --bg-card: #151d2e;
+    --bg-row-hover: #1a2540;
+    --border: #1e2d4a;
+    --text-primary: #e8ecf4;
+    --text-secondary: #8892a6;
+    --text-muted: #555f73;
+    --accent-gold: #f0b637;
+    --accent-blue: #3b82f6;
+    --accent-cyan: #22d3ee;
+    --surplus-pos: #10b981;
+    --surplus-neg: #ef4444;
+    --surplus-neutral: #6b7280;
+    --rank-top5: #f0b637;
+    --rank-top20: #3b82f6;
+    --rank-top50: #22d3ee;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Source Sans 3', sans-serif;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* === HEADER === */
+  .header {
+    background: linear-gradient(135deg, #0d1321 0%, #172040 50%, #0d1321 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 2.5rem 2rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 60px,
+      rgba(59,130,246,0.03) 60px,
+      rgba(59,130,246,0.03) 61px
+    );
+    pointer-events: none;
+  }
+
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .header-brand h1 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 2rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+  }
+
+  .header-brand .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent-gold);
+    background: rgba(240,182,55,0.12);
+    padding: 0.2em 0.6em;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .header-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 400;
+    margin-top: 0.15rem;
+  }
+
+  /* === STAT CARDS === */
+  .stats-bar {
+    max-width: 1400px;
+    margin: -1.5rem auto 0;
+    padding: 0 2rem;
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.1rem 1.25rem;
+  }
+
+  .stat-card .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .stat-card .value {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .stat-card .value .unit {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+  }
+
+  /* === CONTROLS === */
+  .controls {
+    max-width: 1400px;
+    margin: 1.75rem auto 0;
+    padding: 0 2rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .search-box {
+    flex: 1;
+    min-width: 220px;
+    position: relative;
+  }
+
+  .search-box input {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.65rem 1rem 0.65rem 2.5rem;
+    color: var(--text-primary);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-box input:focus {
+    border-color: var(--accent-blue);
+  }
+
+  .search-box input::placeholder { color: var(--text-muted); }
+
+  .search-box .icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  .filter-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .filter-group label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+
+  select {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem 0.85rem;
+    color: var(--text-primary);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+  }
+
+  select:focus { border-color: var(--accent-blue); }
+
+  /* === TABLE === */
+  .table-container {
+    max-width: 1400px;
+    margin: 1.25rem auto 3rem;
+    padding: 0 2rem;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: color 0.2s;
+  }
+
+  thead th:hover { color: var(--accent-blue); }
+  thead th.sorted { color: var(--accent-gold); }
+  thead th .sort-arrow { margin-left: 0.3rem; font-size: 0.6rem; }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(30,45,74,0.5);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: var(--bg-row-hover); }
+
+  tbody td {
+    padding: 0.7rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  /* Rank column */
+  .col-rank {
+    width: 55px;
+    text-align: center;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .rank-top5 { color: var(--rank-top5); }
+  .rank-top20 { color: var(--rank-top20); }
+  .rank-top50 { color: var(--rank-cyan); }
+
+  /* Player column */
+  .col-player {
+    min-width: 200px;
+  }
+
+  .player-name {
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+  }
+
+  .player-team {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.05rem;
+  }
+
+  /* Numeric columns */
+  .col-num {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+  }
+
+  .col-rat {
+    font-weight: 600;
+  }
+
+  .rat-elite { color: var(--accent-gold); }
+  .rat-star { color: var(--accent-blue); }
+  .rat-solid { color: var(--accent-cyan); }
+  .rat-avg { color: var(--text-primary); }
+  .rat-low { color: var(--text-muted); }
+
+  .col-trade-value {
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .col-surplus {
+    font-weight: 600;
+  }
+
+  .surplus-pos { color: var(--surplus-pos); }
+  .surplus-neg { color: var(--surplus-neg); }
+  .surplus-neutral { color: var(--surplus-neutral); }
+
+  /* Surplus bar */
+  .surplus-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.6rem;
+  }
+
+  .surplus-bar-track {
+    width: 80px;
+    height: 6px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .surplus-bar {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+
+  .surplus-bar.positive {
+    left: 50%;
+    background: var(--surplus-pos);
+  }
+
+  .surplus-bar.negative {
+    right: 50%;
+    background: var(--surplus-neg);
+  }
+
+  .surplus-bar-center {
+    position: absolute;
+    left: 50%;
+    top: -1px;
+    bottom: -1px;
+    width: 1px;
+    background: rgba(255,255,255,0.15);
+  }
+
+  /* === METHODOLOGY === */
+  .methodology {
+    max-width: 1400px;
+    margin: 0 auto 3rem;
+    padding: 0 2rem;
+  }
+
+  .method-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.75rem 2rem;
+  }
+
+  .method-card h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+  }
+
+  .method-card p {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.65;
+    max-width: 900px;
+  }
+
+  .method-card code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--accent-cyan);
+    background: rgba(34,211,238,0.08);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+  }
+
+  /* === FOOTER === */
+  .footer {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 2.5rem;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+  }
+
+  .footer a {
+    color: var(--accent-blue);
+    text-decoration: none;
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 900px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .controls { flex-direction: column; }
+    .search-box { min-width: 100%; }
+  }
+
+  @media (max-width: 600px) {
+    .stats-bar { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .stat-card { padding: 0.85rem 1rem; }
+    .stat-card .value { font-size: 1.2rem; }
+    .header { padding: 1.5rem 1rem 1.25rem; }
+    .header-brand h1 { font-size: 1.4rem; }
+    .table-container { padding: 0 0.5rem; }
+    .surplus-bar-track { display: none; }
+    td, th { padding: 0.5rem 0.6rem; }
+  }
+
+  /* Row entrance animation */
+  tbody tr {
+    animation: fadeInRow 0.25s ease both;
+  }
+
+  @keyframes fadeInRow {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <h1>NBA Trade Value Rankings</h1>
+      <span class="tag">v1.0</span>
+    </div>
+    <p class="header-subtitle">Player trade values based on RAT 365 performance rating and league salary benchmarks</p>
+  </div>
+</div>
+
+<div class="stats-bar" id="statsBar"></div>
+
+<div class="controls">
+  <div class="search-box">
+    <span class="icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search player or team...">
+  </div>
+  <div class="filter-group">
+    <label>Team</label>
+    <select id="teamFilter"><option value="">All Teams</option></select>
+  </div>
+  <div class="filter-group">
+    <label>Sort</label>
+    <select id="sortSelect">
+      <option value="trade_value-desc">Trade Value ↓</option>
+      <option value="trade_value-asc">Trade Value ↑</option>
+      <option value="surplus-desc">Surplus ↓</option>
+      <option value="surplus-asc">Surplus ↑</option>
+      <option value="rat-desc">RAT 365 ↓</option>
+      <option value="rat-asc">RAT 365 ↑</option>
+      <option value="salary-desc">Salary ↓</option>
+      <option value="salary-asc">Salary ↑</option>
+    </select>
+  </div>
+</div>
+
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th class="col-rank">#</th>
+        <th>Player</th>
+        <th style="text-align:right">RAT 365</th>
+        <th style="text-align:right">Salary</th>
+        <th style="text-align:right">Trade Value</th>
+        <th style="text-align:right">Surplus</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<div class="methodology">
+  <div class="method-card">
+    <h3>Methodology</h3>
+    <p>
+      Trade Value is derived from a linear scaling of each player's <code>RAT 365</code> performance rating against the league salary benchmark.
+      The average RAT 365 across all <code id="mTotalPlayers">649</code> players is <code id="mAvgRat">4.70</code>.
+      The average salary among <code id="mSalaryPool">434</code> players earning ≥ $1.2M (excluding two-way / temporary contracts) is <code id="mAvgSalary">$12.58M</code>.
+      A player with exactly average RAT 365 receives a trade value equal to the average salary. A player with 2× the average RAT receives 2× the average salary as their trade value.
+      Surplus = Trade Value − Actual Salary.
+    </p>
+    <p style="margin-top:0.6rem;">
+      <code>Trade Value = (Player RAT 365 ÷ Avg RAT 365) × Avg Salary</code>
+    </p>
+  </div>
+</div>
+
+<div class="footer">
+  Hoopsmatic — NBA Trade Value Rankings — Data as of 2025-26 season
+</div>
+
+<script>
+// ===== DATA (inline) =====
+const TRADE_DATA = {"avg_rat": 4.7, "avg_salary": 12581461, "total_players": 649, "salary_pool_players": 434, "players": [{"team": "Oklahoma City", "player": "Shai Gilgeous-Alexander", "rat": 35.49, "salary": 38333050, "trade_value": 94989092, "surplus": 56656042, "rank": 1}, {"team": "Denver", "player": "Nikola Jokic", "rat": 27.67, "salary": 55224526, "trade_value": 74058838, "surplus": 18834312, "rank": 2}, {"team": "LA Lakers", "player": "Luka Doncic", "rat": 24.06, "salary": 45999660, "trade_value": 64396662, "surplus": 18397002, "rank": 3}, {"team": "Minnesota", "player": "Anthony Edwards", "rat": 23.37, "salary": 45550512, "trade_value": 62549875, "surplus": 16999363, "rank": 4}, {"team": "LA Clippers", "player": "James Harden", "rat": 22.43, "salary": 39182693, "trade_value": 60033963, "surplus": 20851270, "rank": 5}, {"team": "Cleveland", "player": "Donovan Mitchell", "rat": 20.92, "salary": 46394100, "trade_value": 55992443, "surplus": 9598343, "rank": 6}, {"team": "Milwaukee", "player": "Giannis Antetokounmpo", "rat": 20.84, "salary": 54126450, "trade_value": 55778323, "surplus": 1651873, "rank": 7}, {"team": "Denver", "player": "Jamal Murray", "rat": 20.57, "salary": 46394100, "trade_value": 55055667, "surplus": 8661567, "rank": 8}, {"team": "Golden State", "player": "Stephen Curry", "rat": 20.38, "salary": 59606817, "trade_value": 54547131, "surplus": -5059686, "rank": 9}, {"team": "New York", "player": "Jalen Brunson", "rat": 20.18, "salary": 34944001, "trade_value": 54011831, "surplus": 19067830, "rank": 10}, {"team": "New York", "player": "Karl-Anthony Towns", "rat": 20.09, "salary": 53142264, "trade_value": 53770946, "surplus": 628682, "rank": 11}, {"team": "Indiana", "player": "Pascal Siakam", "rat": 19.99, "salary": 45550512, "trade_value": 53503295, "surplus": 7952783, "rank": 12}, {"team": "Golden State", "player": "Jimmy Butler", "rat": 19.91, "salary": 54126450, "trade_value": 53289175, "surplus": -837275, "rank": 13}, {"team": "Minnesota", "player": "Julius Randle", "rat": 19.4, "salary": 30864198, "trade_value": 51924158, "surplus": 21059960, "rank": 14}, {"team": "Detroit", "player": "Cade Cunningham", "rat": 19.24, "salary": 46394100, "trade_value": 51495918, "surplus": 5101818, "rank": 15}, {"team": "LA Clippers", "player": "Kawhi Leonard", "rat": 18.56, "salary": 50000000, "trade_value": 49675896, "surplus": -324104, "rank": 16}, {"team": "Boston", "player": "Jaylen Brown", "rat": 18.43, "salary": 53142264, "trade_value": 49327951, "surplus": -3814313, "rank": 17}, {"team": "Houston", "player": "Alperen Sengun", "rat": 17.98, "salary": 33944954, "trade_value": 48123524, "surplus": 14178570, "rank": 18}, {"team": "Boston", "player": "Derrick White", "rat": 17.69, "salary": 28100000, "trade_value": 47347338, "surplus": 19247338, "rank": 19}, {"team": "Cleveland", "player": "Evan Mobley", "rat": 17.6, "salary": 46394100, "trade_value": 47106453, "surplus": 712353, "rank": 20}, {"team": "Oklahoma City", "player": "Chet Holmgren", "rat": 17.31, "salary": 13731368, "trade_value": 46330267, "surplus": 32598899, "rank": 21}, {"team": "Detroit", "player": "Jalen Duren", "rat": 17.04, "salary": 6483144, "trade_value": 45607611, "surplus": 39124467, "rank": 22}, {"team": "Orlando", "player": "Paolo Banchero", "rat": 16.93, "salary": 15334769, "trade_value": 45313196, "surplus": 29978427, "rank": 23}, {"team": "Houston", "player": "Kevin Durant", "rat": 16.79, "salary": 54708609, "trade_value": 44938486, "surplus": -9770123, "rank": 24}, {"team": "LA Clippers", "player": "Ivica Zubac", "rat": 16.62, "salary": 18102000, "trade_value": 44483480, "surplus": 26381480, "rank": 25}, {"team": "Houston", "player": "Amen Thompson", "rat": 16.58, "salary": 9690600, "trade_value": 44376420, "surplus": 34685820, "rank": 26}, {"team": "New York", "player": "Mikal Bridges", "rat": 16.53, "salary": 24900000, "trade_value": 44242595, "surplus": 19342595, "rank": 27}, {"team": "Minnesota", "player": "Rudy Gobert", "rat": 16.25, "salary": 35000000, "trade_value": 43493174, "surplus": 8493174, "rank": 28}, {"team": "Boston", "player": "Payton Pritchard", "rat": 16.19, "salary": 7232143, "trade_value": 43332584, "surplus": 36100441, "rank": 29}, {"team": "Phoenix", "player": "Devin Booker", "rat": 16.04, "salary": 53142264, "trade_value": 42931108, "surplus": -10211156, "rank": 30}, {"team": "LA Lakers", "player": "LeBron James", "rat": 15.86, "salary": 52627153, "trade_value": 42449338, "surplus": -10177815, "rank": 31}, {"team": "Toronto", "player": "Scottie Barnes", "rat": 15.78, "salary": 38661750, "trade_value": 42235218, "surplus": 3573468, "rank": 32}, {"team": "Oklahoma City", "player": "Jalen Williams", "rat": 15.69, "salary": 6580997, "trade_value": 41994332, "surplus": 35413335, "rank": 33}, {"team": "Portland", "player": "Deni Avdija", "rat": 15.58, "salary": 14375000, "trade_value": 41699917, "surplus": 27324917, "rank": 34}, {"team": "Sacramento", "player": "DeMar DeRozan", "rat": 15.54, "salary": 24570000, "trade_value": 41592857, "surplus": 17022857, "rank": 35}, {"team": "Miami", "player": "Bam Adebayo", "rat": 15.07, "salary": 37096620, "trade_value": 40334900, "surplus": 3238280, "rank": 36}, {"team": "Philadelphia", "player": "Tyrese Maxey", "rat": 15.06, "salary": 37958760, "trade_value": 40308135, "surplus": 2349375, "rank": 37}, {"team": "New York", "player": "OG Anunoby", "rat": 14.75, "salary": 39568966, "trade_value": 39478419, "surplus": -90547, "rank": 38}, {"team": "Minnesota", "player": "Jaden McDaniels", "rat": 14.72, "salary": 24393104, "trade_value": 39398124, "surplus": 15005020, "rank": 39}, {"team": "Cleveland", "player": "Jarrett Allen", "rat": 14.71, "salary": 20000000, "trade_value": 39371359, "surplus": 19371359, "rank": 40}, {"team": "LA Lakers", "player": "Austin Reaves", "rat": 14.57, "salary": 13937574, "trade_value": 38996649, "surplus": 25059075, "rank": 41}, {"team": "New York", "player": "Josh Hart", "rat": 14.5, "salary": 19472240, "trade_value": 38809294, "surplus": 19337054, "rank": 42}, {"team": "Brooklyn", "player": "Michael Porter", "rat": 14.43, "salary": 38333050, "trade_value": 38621938, "surplus": 288888, "rank": 43}, {"team": "Orlando", "player": "Desmond Bane", "rat": 14.2, "salary": 36725670, "trade_value": 38006343, "surplus": 1280673, "rank": 44}, {"team": "Minnesota", "player": "Naz Reid", "rat": 14.11, "salary": 21551724, "trade_value": 37765458, "surplus": 16213734, "rank": 45}, {"team": "Atlanta", "player": "Dyson Daniels", "rat": 13.59, "salary": 7707709, "trade_value": 36373676, "surplus": 28665967, "rank": 46}, {"team": "Atlanta", "player": "Onyeka Okongwu", "rat": 13.49, "salary": 15000000, "trade_value": 36106026, "surplus": 21106026, "rank": 47}, {"team": "Charlotte", "player": "Miles Bridges", "rat": 13.4, "salary": 25000000, "trade_value": 35865140, "surplus": 10865140, "rank": 48}, {"team": "Milwaukee", "player": "Myles Turner", "rat": 13.31, "salary": 25318251, "trade_value": 35624255, "surplus": 10306004, "rank": 49}, {"team": "Orlando", "player": "Franz Wagner", "rat": 13.19, "salary": 38661750, "trade_value": 35303075, "surplus": -3358675, "rank": 50}, {"team": "Chicago", "player": "Josh Giddey", "rat": 13.13, "salary": 25000000, "trade_value": 35142485, "surplus": 10142485, "rank": 51}, {"team": "Utah", "player": "Keyonte George", "rat": 12.95, "salary": 4278960, "trade_value": 34660714, "surplus": 30381754, "rank": 52}, {"team": "Indiana", "player": "Andrew Nembhard", "rat": 12.86, "salary": 18102000, "trade_value": 34419829, "surplus": 16317829, "rank": 53}, {"team": "Chicago", "player": "Nikola Vucevic", "rat": 12.81, "salary": 21481481, "trade_value": 34286004, "surplus": 12804523, "rank": 54}, {"team": "San Antonio", "player": "Stephon Castle", "rat": 12.75, "salary": 9560520, "trade_value": 34125413, "surplus": 24564893, "rank": 55}, {"team": "Golden State", "player": "Brandin Podziemski", "rat": 12.71, "salary": 3687960, "trade_value": 34018353, "surplus": 30330393, "rank": 56}, {"team": "Atlanta", "player": "Nickeil Alexander-Walker", "rat": 12.58, "salary": 15161800, "trade_value": 33670408, "surplus": 18508608, "rank": 57}, {"team": "Indiana", "player": "Tyrese Haliburton", "rat": 12.58, "salary": 45550512, "trade_value": 33670408, "surplus": -11880104, "rank": 58}, {"team": "Portland", "player": "Shaedon Sharpe", "rat": 12.37, "salary": 8399983, "trade_value": 33108342, "surplus": 24708359, "rank": 59}, {"team": "Toronto", "player": "Immanuel Quickley", "rat": 12.3, "salary": 32500000, "trade_value": 32920987, "surplus": 420987, "rank": 60}, {"team": "Miami", "player": "Norman Powell", "rat": 12.23, "salary": 20482758, "trade_value": 32733632, "surplus": 12250874, "rank": 61}, {"team": "Oklahoma City", "player": "Isaiah Hartenstein", "rat": 12.2, "salary": 28500000, "trade_value": 32653337, "surplus": 4153337, "rank": 62}, {"team": "Detroit", "player": "Ausar Thompson", "rat": 11.85, "salary": 8775000, "trade_value": 31716561, "surplus": 22941561, "rank": 63}, {"team": "Dallas", "player": "Naji Marshall", "rat": 11.83, "salary": 9000000, "trade_value": 31663031, "surplus": 22663031, "rank": 64}, {"team": "Phoenix", "player": "Dillon Brooks", "rat": 11.67, "salary": 21124110, "trade_value": 31234790, "surplus": 10110680, "rank": 65}, {"team": "Minnesota", "player": "Donte DiVincenzo", "rat": 11.56, "salary": 11990000, "trade_value": 30940375, "surplus": 18950375, "rank": 66}, {"team": "Memphis", "player": "Jaren Jackson Jr", "rat": 11.53, "salary": 35000000, "trade_value": 30860080, "surplus": -4139920, "rank": 67}, {"team": "Orlando", "player": "Anthony Black", "rat": 11.51, "salary": 7970280, "trade_value": 30806550, "surplus": 22836270, "rank": 68}, {"team": "Denver", "player": "Aaron Gordon", "rat": 11.35, "salary": 22841455, "trade_value": 30378309, "surplus": 7536854, "rank": 69}, {"team": "San Antonio", "player": "De'Aaron Fox", "rat": 11.24, "salary": 37096620, "trade_value": 30083894, "surplus": -7012726, "rank": 70}, {"team": "San Antonio", "player": "Keldon Johnson", "rat": 11.21, "salary": 17500000, "trade_value": 30003599, "surplus": 12503599, "rank": 71}, {"team": "New Orleans", "player": "Trey Murphy", "rat": 11.15, "salary": 25000000, "trade_value": 29843009, "surplus": 4843009, "rank": 72}, {"team": "New Orleans", "player": "Zion Williamson", "rat": 11.09, "salary": 39446090, "trade_value": 29682418, "surplus": -9763672, "rank": 73}, {"team": "Chicago", "player": "Coby White", "rat": 10.97, "salary": 12888889, "trade_value": 29361238, "surplus": 16472349, "rank": 74}, {"team": "Sacramento", "player": "Zach LaVine", "rat": 10.97, "salary": 47499660, "trade_value": 29361238, "surplus": -18138422, "rank": 75}, {"team": "Houston", "player": "Jabari Smith", "rat": 10.96, "salary": 12350392, "trade_value": 29334473, "surplus": 16984081, "rank": 76}, {"team": "Phoenix", "player": "Mark Williams", "rat": 10.84, "salary": 6276531, "trade_value": 29013293, "surplus": 22736762, "rank": 77}, {"team": "Atlanta", "player": "Jalen Johnson", "rat": 10.81, "salary": 30000000, "trade_value": 28932998, "surplus": -1067002, "rank": 78}, {"team": "Portland", "player": "Donovan Clingan", "rat": 10.58, "salary": 7178400, "trade_value": 28317402, "surplus": 21139002, "rank": 79}, {"team": "Sacramento", "player": "Russell Westbrook", "rat": 10.58, "salary": 3634153, "trade_value": 28317402, "surplus": 24683249, "rank": 80}, {"team": "San Antonio", "player": "Victor Wembanyama", "rat": 10.54, "salary": 13376880, "trade_value": 28210342, "surplus": 14833462, "rank": 81}, {"team": "Cleveland", "player": "Darius Garland", "rat": 10.51, "salary": 39446090, "trade_value": 28130047, "surplus": -11316043, "rank": 82}, {"team": "Brooklyn", "player": "Nicolas Claxton", "rat": 10.44, "salary": 25352272, "trade_value": 27942691, "surplus": 2590419, "rank": 83}, {"team": "Miami", "player": "Kel'el Ware", "rat": 10.39, "salary": 4443360, "trade_value": 27808866, "surplus": 23365506, "rank": 84}, {"team": "Orlando", "player": "Wendell Carter Jr", "rat": 10.37, "salary": 10850000, "trade_value": 27755336, "surplus": 16905336, "rank": 85}, {"team": "San Antonio", "player": "Luke Kornet", "rat": 10.3, "salary": 11000000, "trade_value": 27567981, "surplus": 16567981, "rank": 86}, {"team": "Chicago", "player": "Matas Buzelis", "rat": 10.27, "salary": 5455560, "trade_value": 27487686, "surplus": 22032126, "rank": 87}, {"team": "Boston", "player": "Jayson Tatum", "rat": 10.23, "salary": 54126450, "trade_value": 27380626, "surplus": -26745824, "rank": 88}, {"team": "Boston", "player": "Anfernee Simons", "rat": 10.19, "salary": 27678571, "trade_value": 27273566, "surplus": -405005, "rank": 89}, {"team": "Philadelphia", "player": "Quentin Grimes", "rat": 10.16, "salary": 8741210, "trade_value": 27193271, "surplus": 18452061, "rank": 90}, {"team": "Indiana", "player": "Aaron Nesmith", "rat": 10.1, "salary": 11000000, "trade_value": 27032680, "surplus": 16032680, "rank": 91}, {"team": "Miami", "player": "Tyler Herro", "rat": 10.04, "salary": 31000000, "trade_value": 26872090, "surplus": -4127910, "rank": 92}, {"team": "Miami", "player": "Andrew Wiggins", "rat": 10.03, "salary": 28223215, "trade_value": 26845325, "surplus": -1377890, "rank": 93}, {"team": "Denver", "player": "Tim Hardaway Jr", "rat": 10.02, "salary": 3634153, "trade_value": 26818560, "surplus": 23184407, "rank": 94}, {"team": "Detroit", "player": "Tobias Harris", "rat": 9.88, "salary": 26634146, "trade_value": 26443850, "surplus": -190296, "rank": 95}, {"team": "Golden State", "player": "Moses Moody", "rat": 9.85, "salary": 11574075, "trade_value": 26363555, "surplus": 14789480, "rank": 96}, {"team": "Oklahoma City", "player": "Aaron Wiggins", "rat": 9.8, "salary": 10102803, "trade_value": 26229730, "surplus": 16126927, "rank": 97}, {"team": "Denver", "player": "Christian Braun", "rat": 9.76, "salary": 4921797, "trade_value": 26122669, "surplus": 21200872, "rank": 98}, {"team": "Denver", "player": "Peyton Watson", "rat": 9.68, "salary": 4356476, "trade_value": 25908549, "surplus": 21552073, "rank": 99}, {"team": "Sacramento", "player": "De'Andre Hunter", "rat": 9.68, "salary": 23303571, "trade_value": 25908549, "surplus": 2604978, "rank": 100}, {"team": "Portland", "player": "Toumani Camara", "rat": 9.6, "salary": 2221677, "trade_value": 25694429, "surplus": 23472752, "rank": 101}, {"team": "San Antonio", "player": "Harrison Barnes", "rat": 9.56, "salary": 19000000, "trade_value": 25587369, "surplus": 6587369, "rank": 102}, {"team": "Golden State", "player": "Draymond Green", "rat": 9.51, "salary": 25892857, "trade_value": 25453544, "surplus": -439313, "rank": 103}, {"team": "Washington", "player": "Trae Young", "rat": 9.45, "salary": 46394100, "trade_value": 25292953, "surplus": -21101147, "rank": 104}, {"team": "Indiana", "player": "Bennedict Mathurin", "rat": 9.41, "salary": 9187573, "trade_value": 25185893, "surplus": 15998320, "rank": 105}, {"team": "Indiana", "player": "TJ McConnell", "rat": 9.4, "salary": 10200000, "trade_value": 25159128, "surplus": 14959128, "rank": 106}, {"team": "Oklahoma City", "player": "Cason Wallace", "rat": 9.38, "salary": 5820240, "trade_value": 25105598, "surplus": 19285358, "rank": 107}, {"team": "Milwaukee", "player": "Kyle Kuzma", "rat": 9.37, "salary": 22410605, "trade_value": 25078833, "surplus": 2668228, "rank": 108}, {"team": "Memphis", "player": "Santiago Aldama", "rat": 9.33, "salary": 18485916, "trade_value": 24971773, "surplus": 6485857, "rank": 109}, {"team": "Atlanta", "player": "CJ McCollum", "rat": 9.3, "salary": 30666666, "trade_value": 24891478, "surplus": -5775188, "rank": 110}, {"team": "Phoenix", "player": "Collin Gillespie", "rat": 9.3, "salary": 2378870, "trade_value": 24891478, "surplus": 22512608, "rank": 111}, {"team": "San Antonio", "player": "Devin Vassell", "rat": 9.29, "salary": 27000000, "trade_value": 24864713, "surplus": -2135287, "rank": 112}, {"team": "Milwaukee", "player": "Ryan Rollins", "rat": 9.26, "salary": 4000000, "trade_value": 24784418, "surplus": 20784418, "rank": 113}, {"team": "Toronto", "player": "Brandon Ingram", "rat": 9.19, "salary": 38095238, "trade_value": 24597063, "surplus": -13498175, "rank": 114}, {"team": "Oklahoma City", "player": "Isaiah Joe", "rat": 9.17, "salary": 12362338, "trade_value": 24543533, "surplus": 12181195, "rank": 115}, {"team": "Utah", "player": "Lauri Markkanen", "rat": 9.14, "salary": 46394100, "trade_value": 24463238, "surplus": -21930862, "rank": 116}, {"team": "Milwaukee", "player": "Kevin Porter", "rat": 9.11, "salary": 5134000, "trade_value": 24382942, "surplus": 19248942, "rank": 117}, {"team": "Miami", "player": "Davion Mitchell", "rat": 9.06, "salary": 11600000, "trade_value": 24249117, "surplus": 12649117, "rank": 118}, {"team": "Charlotte", "player": "LaMelo Ball", "rat": 8.91, "salary": 37958760, "trade_value": 23847642, "surplus": -14111118, "rank": 119}, {"team": "Washington", "player": "Alex Sarr", "rat": 8.87, "salary": 11808240, "trade_value": 23740582, "surplus": 11932342, "rank": 120}, {"team": "Oklahoma City", "player": "Alex Caruso", "rat": 8.79, "salary": 18102100, "trade_value": 23526461, "surplus": 5424361, "rank": 121}, {"team": "San Antonio", "player": "Julian Champagnie", "rat": 8.69, "salary": 3000000, "trade_value": 23258811, "surplus": 20258811, "rank": 122}, {"team": "Memphis", "player": "Ja Morant", "rat": 8.68, "salary": 39446090, "trade_value": 23232046, "surplus": -16214044, "rank": 123}, {"team": "Miami", "player": "Jaime Jaquez", "rat": 8.65, "salary": 3861600, "trade_value": 23151751, "surplus": 19290151, "rank": 124}, {"team": "Boston", "player": "Neemias Queta", "rat": 8.53, "salary": 2349578, "trade_value": 22830571, "surplus": 20480993, "rank": 125}, {"team": "Boston", "player": "Sam Hauser", "rat": 8.5, "salary": 10044644, "trade_value": 22750276, "surplus": 12705632, "rank": 126}, {"team": "Chicago", "player": "Tre Jones", "rat": 8.47, "salary": 8000000, "trade_value": 22669981, "surplus": 14669981, "rank": 127}, {"team": "Toronto", "player": "Sandro Mamukelashvili", "rat": 8.47, "salary": 2461463, "trade_value": 22669981, "surplus": 20208518, "rank": 128}, {"team": "Charlotte", "player": "Moussa Diabate", "rat": 8.35, "salary": 2270735, "trade_value": 22348800, "surplus": 20078065, "rank": 129}, {"team": "Philadelphia", "player": "Joel Embiid", "rat": 8.33, "salary": 55224526, "trade_value": 22295270, "surplus": -32929256, "rank": 130}, {"team": "Toronto", "player": "RJ Barrett", "rat": 8.32, "salary": 27705357, "trade_value": 22268505, "surplus": -5436852, "rank": 131}, {"team": "Chicago", "player": "Kevin Huerter", "rat": 8.14, "salary": 17991071, "trade_value": 21786735, "surplus": 3795664, "rank": 132}, {"team": "Oklahoma City", "player": "Luguentz Dort", "rat": 8.11, "salary": 18222222, "trade_value": 21706439, "surplus": 3484217, "rank": 133}, {"team": "Cleveland", "player": "Dennis Schroeder", "rat": 8.1, "salary": 14104000, "trade_value": 21679674, "surplus": 7575674, "rank": 134}, {"team": "Golden State", "player": "Buddy Hield", "rat": 8.08, "salary": 9219512, "trade_value": 21626144, "surplus": 12406632, "rank": 135}, {"team": "Charlotte", "player": "Kon Knueppel", "rat": 8.05, "salary": 10015680, "trade_value": 21545849, "surplus": 11530169, "rank": 136}, {"team": "Phoenix", "player": "Royce O'Neale", "rat": 8.03, "salary": 10125000, "trade_value": 21492319, "surplus": 11367319, "rank": 137}, {"team": "Dallas", "player": "Max Christie", "rat": 8.01, "salary": 7714286, "trade_value": 21438789, "surplus": 13724503, "rank": 138}, {"team": "LA Clippers", "player": "Brook Lopez", "rat": 8.01, "salary": 8750000, "trade_value": 21438789, "surplus": 12688789, "rank": 139}, {"team": "Atlanta", "player": "Kristaps Porzingis", "rat": 7.95, "salary": 30731707, "trade_value": 21278199, "surplus": -9453508, "rank": 140}, {"team": "LA Lakers", "player": "Rui Hachimura", "rat": 7.9, "salary": 18259259, "trade_value": 21144374, "surplus": 2885115, "rank": 141}, {"team": "Detroit", "player": "Duncan Robinson", "rat": 7.88, "salary": 16834692, "trade_value": 21090844, "surplus": 4256152, "rank": 142}, {"team": "LA Clippers", "player": "Kris Dunn", "rat": 7.87, "salary": 5426400, "trade_value": 21064079, "surplus": 15637679, "rank": 143}, {"team": "LA Lakers", "player": "Deandre Ayton", "rat": 7.82, "salary": 8104000, "trade_value": 20930254, "surplus": 12826254, "rank": 144}, {"team": "Dallas", "player": "Cooper Flagg", "rat": 7.8, "salary": 13825920, "trade_value": 20876723, "surplus": 7050803, "rank": 145}, {"team": "Detroit", "player": "Isaiah Stewart", "rat": 7.77, "salary": 15000000, "trade_value": 20796428, "surplus": 5796428, "rank": 146}, {"team": "New York", "player": "Miles McBride", "rat": 7.7, "salary": 4333333, "trade_value": 20609073, "surplus": 16275740, "rank": 147}, {"team": "Denver", "player": "Jonas Valanciunas", "rat": 7.67, "salary": 10395000, "trade_value": 20528778, "surplus": 10133778, "rank": 148}, {"team": "Houston", "player": "Tari Eason", "rat": 7.67, "salary": 5675766, "trade_value": 20528778, "surplus": 14853012, "rank": 149}, {"team": "Sacramento", "player": "Domantas Sabonis", "rat": 7.65, "salary": 42336000, "trade_value": 20475248, "surplus": -21860752, "rank": 150}, {"team": "Utah", "player": "Kyle Filipowski", "rat": 7.62, "salary": 3000000, "trade_value": 20394953, "surplus": 17394953, "rank": 151}, {"team": "Atlanta", "player": "Zaccharie Risacher", "rat": 7.59, "salary": 13197720, "trade_value": 20314658, "surplus": 7116938, "rank": 152}, {"team": "Phoenix", "player": "Jalen Green", "rat": 7.59, "salary": 33584499, "trade_value": 20314658, "surplus": -13269841, "rank": 153}, {"team": "Oklahoma City", "player": "Ajay Mitchell", "rat": 7.56, "salary": 3000000, "trade_value": 20234363, "surplus": 17234363, "rank": 154}, {"team": "Golden State", "player": "Al Horford", "rat": 7.52, "salary": 5685000, "trade_value": 20127303, "surplus": 14442303, "rank": 155}, {"team": "New York", "player": "Mitchell Robinson", "rat": 7.37, "salary": 12954546, "trade_value": 19725827, "surplus": 6771281, "rank": 156}, {"team": "Milwaukee", "player": "Bobby Portis", "rat": 7.32, "salary": 13445754, "trade_value": 19592002, "surplus": 6146248, "rank": 157}, {"team": "Cleveland", "player": "Jaylon Tyson", "rat": 7.27, "salary": 3492480, "trade_value": 19458177, "surplus": 15965697, "rank": 158}, {"team": "Dallas", "player": "Brandon Williams", "rat": 7.27, "salary": 2270735, "trade_value": 19458177, "surplus": 17187442, "rank": 159}, {"team": "Milwaukee", "player": "Gary Trent Jr", "rat": 7.26, "salary": 3697105, "trade_value": 19431412, "surplus": 15734307, "rank": 160}, {"team": "Charlotte", "player": "Collin Sexton", "rat": 7.23, "salary": 18975000, "trade_value": 19351117, "surplus": 376117, "rank": 161}, {"team": "LA Lakers", "player": "Jaxson Hayes", "rat": 7.17, "salary": 3449323, "trade_value": 19190527, "surplus": 15741204, "rank": 162}, {"team": "LA Clippers", "player": "John Collins", "rat": 7.16, "salary": 26580000, "trade_value": 19163762, "surplus": -7416238, "rank": 163}, {"team": "Utah", "player": "Isaiah Collier", "rat": 7.15, "salary": 2638200, "trade_value": 19136997, "surplus": 16498797, "rank": 164}, {"team": "Dallas", "player": "Klay Thompson", "rat": 7.1, "salary": 16666667, "trade_value": 19003171, "surplus": 2336504, "rank": 165}, {"team": "Portland", "player": "Jrue Holiday", "rat": 7.08, "salary": 32400000, "trade_value": 18949641, "surplus": -13450359, "rank": 166}, {"team": "Phoenix", "player": "Grayson Allen", "rat": 7.07, "salary": 16875000, "trade_value": 18922876, "surplus": 2047876, "rank": 167}, {"team": "Toronto", "player": "Jamal Shead", "rat": 7.06, "salary": 1955377, "trade_value": 18896111, "surplus": 16940734, "rank": 168}, {"team": "Denver", "player": "Cameron Johnson", "rat": 7.04, "salary": 21057065, "trade_value": 18842581, "surplus": -2214484, "rank": 169}, {"team": "Golden State", "player": "Quinten Post", "rat": 7.01, "salary": 1955377, "trade_value": 18762286, "surplus": 16806909, "rank": 170}, {"team": "Washington", "player": "Justin Champagnie", "rat": 6.98, "salary": 2349578, "trade_value": 18681991, "surplus": 16332413, "rank": 171}, {"team": "Houston", "player": "Reed Sheppard", "rat": 6.97, "salary": 10603560, "trade_value": 18655226, "surplus": 8051666, "rank": 172}, {"team": "Brooklyn", "player": "Day'Ron Sharpe", "rat": 6.96, "salary": 6250000, "trade_value": 18628461, "surplus": 12378461, "rank": 173}, {"team": "Dallas", "player": "Anthony Davis", "rat": 6.91, "salary": 54126450, "trade_value": 18494636, "surplus": -35631814, "rank": 174}, {"team": "Chicago", "player": "Ayo Dosunmu", "rat": 6.84, "salary": 7518518, "trade_value": 18307281, "surplus": 10788763, "rank": 175}, {"team": "Utah", "player": "Jusuf Nurkic", "rat": 6.82, "salary": 19375000, "trade_value": 18253751, "surplus": -1121249, "rank": 176}, {"team": "Philadelphia", "player": "VJ Edgecombe", "rat": 6.8, "salary": 11108880, "trade_value": 18200220, "surplus": 7091340, "rank": 177}, {"team": "Washington", "player": "Kyshawn George", "rat": 6.79, "salary": 2966760, "trade_value": 18173455, "surplus": 15206695, "rank": 178}, {"team": "Sacramento", "player": "Malik Monk", "rat": 6.77, "salary": 18797619, "trade_value": 18119925, "surplus": -677694, "rank": 179}, {"team": "Minnesota", "player": "Mike Conley", "rat": 6.74, "salary": 10774038, "trade_value": 18039630, "surplus": 7265592, "rank": 180}, {"team": "Detroit", "player": "Caris LeVert", "rat": 6.62, "salary": 14104000, "trade_value": 17718450, "surplus": 3614450, "rank": 181}, {"team": "Phoenix", "player": "Jordan Goodwin", "rat": 6.62, "salary": 2349578, "trade_value": 17718450, "surplus": 15368872, "rank": 182}, {"team": "Washington", "player": "Carlton Carrington", "rat": 6.57, "salary": 4677600, "trade_value": 17584625, "surplus": 12907025, "rank": 183}, {"team": "New Orleans", "player": "Saddiq Bey", "rat": 6.51, "salary": 6118644, "trade_value": 17424035, "surplus": 11305391, "rank": 184}, {"team": "LA Lakers", "player": "Jake LaRavia", "rat": 6.42, "salary": 6000000, "trade_value": 17183149, "surplus": 11183149, "rank": 185}, {"team": "Houston", "player": "Steven Adams", "rat": 6.41, "salary": 14130434, "trade_value": 17156384, "surplus": 3025950, "rank": 186}, {"team": "Indiana", "player": "Obi Toppin", "rat": 6.41, "salary": 14000000, "trade_value": 17156384, "surplus": 3156384, "rank": 187}, {"team": "Memphis", "player": "Cam Spencer", "rat": 6.41, "salary": 2537989, "trade_value": 17156384, "surplus": 14618395, "rank": 188}, {"team": "Cleveland", "player": "Sam Merrill", "rat": 6.4, "salary": 8482144, "trade_value": 17129619, "surplus": 8647475, "rank": 189}, {"team": "Memphis", "player": "Kentavious Caldwell-Pope", "rat": 6.39, "salary": 21621500, "trade_value": 17102854, "surplus": -4518646, "rank": 190}, {"team": "Utah", "player": "Brice Sensabaugh", "rat": 6.39, "salary": 2693760, "trade_value": 17102854, "surplus": 14409094, "rank": 191}, {"team": "Memphis", "player": "Jock Landale", "rat": 6.35, "salary": 2461463, "trade_value": 16995794, "surplus": 14534331, "rank": 192}, {"team": "Memphis", "player": "Zach Edey", "rat": 6.34, "salary": 6045000, "trade_value": 16969029, "surplus": 10924029, "rank": 193}, {"team": "Memphis", "player": "Jaylen Wells", "rat": 6.33, "salary": 1955377, "trade_value": 16942264, "surplus": 14986887, "rank": 194}, {"team": "New Orleans", "player": "Jordan Poole", "rat": 6.26, "salary": 31848215, "trade_value": 16754909, "surplus": -15093306, "rank": 195}, {"team": "Atlanta", "player": "Luke Kennard", "rat": 6.25, "salary": 11000000, "trade_value": 16728144, "surplus": 5728144, "rank": 196}, {"team": "Dallas", "player": "PJ Washington", "rat": 6.24, "salary": 14152174, "trade_value": 16701379, "surplus": 2549205, "rank": 197}, {"team": "Detroit", "player": "Ron Holland", "rat": 6.24, "salary": 8657280, "trade_value": 16701379, "surplus": 8044099, "rank": 198}, {"team": "Miami", "player": "Pelle Larsson", "rat": 6.24, "salary": 1955377, "trade_value": 16701379, "surplus": 14746002, "rank": 199}, {"team": "Orlando", "player": "Goga Bitadze", "rat": 6.24, "salary": 8333333, "trade_value": 16701379, "surplus": 8368046, "rank": 200}, {"team": "Brooklyn", "player": "Terance Mann", "rat": 6.2, "salary": 15500000, "trade_value": 16594319, "surplus": 1094319, "rank": 201}, {"team": "Denver", "player": "Bruce Brown", "rat": 6.18, "salary": 3080921, "trade_value": 16540789, "surplus": 13459868, "rank": 202}, {"team": "Milwaukee", "player": "AJ Green", "rat": 6.14, "salary": 2301587, "trade_value": 16433728, "surplus": 14132141, "rank": 203}, {"team": "Sacramento", "player": "Keegan Murray", "rat": 6.14, "salary": 11144093, "trade_value": 16433728, "surplus": 5289635, "rank": 204}, {"team": "Portland", "player": "Vit Krejci", "rat": 6.04, "salary": 2349578, "trade_value": 16166078, "surplus": 13816500, "rank": 205}, {"team": "New Orleans", "player": "Yves Missi", "rat": 6.02, "salary": 3353040, "trade_value": 16112548, "surplus": 12759508, "rank": 206}, {"team": "Charlotte", "player": "Brandon Miller", "rat": 6.0, "salary": 11968800, "trade_value": 16059018, "surplus": 4090218, "rank": 207}, {"team": "Oklahoma City", "player": "Jaylin Williams", "rat": 5.91, "salary": 8450704, "trade_value": 15818133, "surplus": 7367429, "rank": 208}, {"team": "Sacramento", "player": "Precious Achiuwa", "rat": 5.88, "salary": 2453285, "trade_value": 15737838, "surplus": 13284553, "rank": 209}, {"team": "Portland", "player": "Jerami Grant", "rat": 5.79, "salary": 32000001, "trade_value": 15496952, "surplus": -16503049, "rank": 210}, {"team": "Chicago", "player": "Jalen Smith", "rat": 5.78, "salary": 9000000, "trade_value": 15470187, "surplus": 6470187, "rank": 211}, {"team": "Oklahoma City", "player": "Kenrich Williams", "rat": 5.76, "salary": 7163000, "trade_value": 15416657, "surplus": 8253657, "rank": 212}, {"team": "New Orleans", "player": "Derik Queen", "rat": 5.7, "salary": 5157960, "trade_value": 15256067, "surplus": 10098107, "rank": 213}, {"team": "Golden State", "player": "Gary Payton II", "rat": 5.66, "salary": 3303774, "trade_value": 15149007, "surplus": 11845233, "rank": 214}, {"team": "Chicago", "player": "Isaac Okoro", "rat": 5.64, "salary": 11000000, "trade_value": 15095477, "surplus": 4095477, "rank": 215}, {"team": "Indiana", "player": "Jarace Walker", "rat": 5.5, "salary": 6665520, "trade_value": 14720767, "surplus": 8055247, "rank": 216}, {"team": "LA Clippers", "player": "Derrick Jones", "rat": 5.47, "salary": 10000000, "trade_value": 14640471, "surplus": 4640471, "rank": 217}, {"team": "Philadelphia", "player": "Kelly Oubre", "rat": 5.42, "salary": 8382150, "trade_value": 14506646, "surplus": 6124496, "rank": 218}, {"team": "New Orleans", "player": "Jose Alvarado", "rat": 5.38, "salary": 4500000, "trade_value": 14399586, "surplus": 9899586, "rank": 219}, {"team": "Phoenix", "player": "Oso Ighodaro", "rat": 5.38, "salary": 1955377, "trade_value": 14399586, "surplus": 12444209, "rank": 220}, {"team": "Philadelphia", "player": "Paul George", "rat": 5.34, "salary": 51666090, "trade_value": 14292526, "surplus": -37373564, "rank": 221}, {"team": "Cleveland", "player": "Keon Ellis", "rat": 5.29, "salary": 2301587, "trade_value": 14158701, "surplus": 11857114, "rank": 222}, {"team": "Detroit", "player": "Javonte Green", "rat": 5.2, "salary": 2874436, "trade_value": 13917816, "surplus": 11043380, "rank": 223}, {"team": "Atlanta", "player": "Mouhamed Gueye", "rat": 5.19, "salary": 2221677, "trade_value": 13891051, "surplus": 11669374, "rank": 224}, {"team": "Boston", "player": "Luka Garza", "rat": 5.19, "salary": 2461463, "trade_value": 13891051, "surplus": 11429588, "rank": 225}, {"team": "Memphis", "player": "Cedric Coward", "rat": 5.19, "salary": 5715120, "trade_value": 13891051, "surplus": 8175931, "rank": 226}, {"team": "", "player": "Malik Beasley", "rat": 5.19, "salary": 0, "trade_value": 13891051, "surplus": 13891051, "rank": 227}, {"team": "Toronto", "player": "Jakob Poeltl", "rat": 5.18, "salary": 19500000, "trade_value": 13864286, "surplus": -5635714, "rank": 228}, {"team": "Cleveland", "player": "Craig Porter", "rat": 5.16, "salary": 2221677, "trade_value": 13810756, "surplus": 11589079, "rank": 229}, {"team": "Memphis", "player": "Ty Jerome", "rat": 5.16, "salary": 8781000, "trade_value": 13810756, "surplus": 5029756, "rank": 230}, {"team": "Orlando", "player": "Tyus Jones", "rat": 5.15, "salary": 7000000, "trade_value": 13783991, "surplus": 6783991, "rank": 231}, {"team": "Indiana", "player": "Jay Huff", "rat": 5.14, "salary": 2349578, "trade_value": 13757225, "surplus": 11407647, "rank": 232}, {"team": "LA Clippers", "player": "Nicolas Batum", "rat": 5.12, "salary": 5601600, "trade_value": 13703695, "surplus": 8102095, "rank": 233}, {"team": "Philadelphia", "player": "Dominick Barlow", "rat": 5.09, "salary": 636435, "trade_value": 13623400, "surplus": 12986965, "rank": 234}, {"team": "Phoenix", "player": "Ryan Dunn", "rat": 5.01, "salary": 2657760, "trade_value": 13409280, "surplus": 10751520, "rank": 235}, {"team": "Cleveland", "player": "Thomas Bryant", "rat": 4.98, "salary": 3287409, "trade_value": 13328985, "surplus": 10041576, "rank": 236}, {"team": "Miami", "player": "Simone Fontecchio", "rat": 4.96, "salary": 8307692, "trade_value": 13275455, "surplus": 4967763, "rank": 237}, {"team": "Cleveland", "player": "Max Strus", "rat": 4.87, "salary": 15936452, "trade_value": 13034570, "surplus": -2901882, "rank": 238}, {"team": "New Orleans", "player": "Karlo Matkovic", "rat": 4.87, "salary": 1955377, "trade_value": 13034570, "surplus": 11079193, "rank": 239}, {"team": "Portland", "player": "Damian Lillard", "rat": 4.81, "salary": 14104000, "trade_value": 12873979, "surplus": -1230021, "rank": 240}, {"team": "LA Lakers", "player": "Marcus Smart", "rat": 4.76, "salary": 5134000, "trade_value": 12740154, "surplus": 7606154, "rank": 241}, {"team": "New York", "player": "Jordan Clarkson", "rat": 4.76, "salary": 3634153, "trade_value": 12740154, "surplus": 9106001, "rank": 242}, {"team": "LA Lakers", "player": "Jarred Vanderbilt", "rat": 4.75, "salary": 11571429, "trade_value": 12713389, "surplus": 1141960, "rank": 243}, {"team": "LA Clippers", "player": "Bogdan Bogdanovic", "rat": 4.7, "salary": 16020000, "trade_value": 12579564, "surplus": -3440436, "rank": 244}, {"team": "Orlando", "player": "Tristan Da Silva", "rat": 4.7, "salary": 3809520, "trade_value": 12579564, "surplus": 8770044, "rank": 245}, {"team": "Cleveland", "player": "Dean Wade", "rat": 4.63, "salary": 6623456, "trade_value": 12392209, "surplus": 5768753, "rank": 246}, {"team": "New Orleans", "player": "Jeremiah Fears", "rat": 4.6, "salary": 7520040, "trade_value": 12311914, "surplus": 4791874, "rank": 247}, {"team": "Brooklyn", "player": "Noah Clowney", "rat": 4.55, "salary": 3398640, "trade_value": 12178089, "surplus": 8779449, "rank": 248}, {"team": "Golden State", "player": "Jonathan Kuminga", "rat": 4.55, "salary": 22500000, "trade_value": 12178089, "surplus": -10321911, "rank": 249}, {"team": "Brooklyn", "player": "Ziaire Williams", "rat": 4.53, "salary": 6250000, "trade_value": 12124559, "surplus": 5874559, "rank": 250}, {"team": "Philadelphia", "player": "Adem Bona", "rat": 4.47, "salary": 1955377, "trade_value": 11963968, "surplus": 10008591, "rank": 251}, {"team": "Milwaukee", "player": "Cole Anthony", "rat": 4.44, "salary": 2667947, "trade_value": 11883673, "surplus": 9215726, "rank": 252}, {"team": "Philadelphia", "player": "Andre Drummond", "rat": 4.43, "salary": 5000000, "trade_value": 11856908, "surplus": 6856908, "rank": 253}, {"team": "Toronto", "player": "Ja'Kobe Walter", "rat": 4.43, "salary": 3638160, "trade_value": 11856908, "surplus": 8218748, "rank": 254}, {"team": "San Antonio", "player": "Dylan Harper", "rat": 4.42, "salary": 12370320, "trade_value": 11830143, "surplus": -540177, "rank": 255}, {"team": "Washington", "player": "Marvin Bagley", "rat": 4.42, "salary": 3080921, "trade_value": 11830143, "surplus": 8749222, "rank": 256}, {"team": "Brooklyn", "player": "Tyrese Martin", "rat": 4.41, "salary": 2191897, "trade_value": 11803378, "surplus": 9611481, "rank": 257}, {"team": "Minnesota", "player": "Jaylen Clark", "rat": 4.38, "salary": 2191897, "trade_value": 11723083, "surplus": 9531186, "rank": 258}, {"team": "New York", "player": "Landry Shamet", "rat": 4.37, "salary": 3080921, "trade_value": 11696318, "surplus": 8615397, "rank": 259}, {"team": "Philadelphia", "player": "Trendon Watford", "rat": 4.37, "salary": 2461463, "trade_value": 11696318, "surplus": 9234855, "rank": 260}, {"team": "Dallas", "player": "Daniel Gafford", "rat": 4.29, "salary": 14386320, "trade_value": 11482198, "surplus": -2904122, "rank": 261}, {"team": "Indiana", "player": "Ben Sheppard", "rat": 4.23, "salary": 2790720, "trade_value": 11321608, "surplus": 8530888, "rank": 262}, {"team": "LA Clippers", "player": "Chris Paul", "rat": 4.22, "salary": 3634153, "trade_value": 11294843, "surplus": 7660690, "rank": 263}, {"team": "Memphis", "player": "Scotty Pippen Jr", "rat": 4.22, "salary": 2270735, "trade_value": 11294843, "surplus": 9024108, "rank": 264}, {"team": "Washington", "player": "Khris Middleton", "rat": 4.18, "salary": 33296296, "trade_value": 11187783, "surplus": -22108513, "rank": 265}, {"team": "San Antonio", "player": "Jeremy Sochan", "rat": 4.17, "salary": 7096231, "trade_value": 11161018, "surplus": 4064787, "rank": 266}, {"team": "Charlotte", "player": "Ryan Kalkbrenner", "rat": 4.16, "salary": 2296274, "trade_value": 11134253, "surplus": 8837979, "rank": 267}, {"team": "Chicago", "player": "Patrick Williams", "rat": 4.15, "salary": 18000000, "trade_value": 11107488, "surplus": -6892512, "rank": 268}, {"team": "Toronto", "player": "Gradey Dick", "rat": 4.14, "salary": 4990560, "trade_value": 11080722, "surplus": 6090162, "rank": 269}, {"team": "Denver", "player": "Zeke Nnaji", "rat": 4.06, "salary": 8177778, "trade_value": 10866602, "surplus": 2688824, "rank": 270}, {"team": "Denver", "player": "Jalen Pickett", "rat": 4.06, "salary": 2221677, "trade_value": 10866602, "surplus": 8644925, "rank": 271}, {"team": "Utah", "player": "Walker Kessler", "rat": 4.03, "salary": 4878938, "trade_value": 10786307, "surplus": 5907369, "rank": 272}, {"team": "Golden State", "player": "Gui Santos", "rat": 4.02, "salary": 2221677, "trade_value": 10759542, "surplus": 8537865, "rank": 273}, {"team": "Chicago", "player": "Zach Collins", "rat": 3.97, "salary": 18080496, "trade_value": 10625717, "surplus": -7454779, "rank": 274}, {"team": "", "player": "Spencer Dinwiddie", "rat": 3.93, "salary": 0, "trade_value": 10518657, "surplus": 10518657, "rank": 275}, {"team": "Miami", "player": "Nikola Jovic", "rat": 3.9, "salary": 4445417, "trade_value": 10438362, "surplus": 5992945, "rank": 276}, {"team": "Atlanta", "player": "Corey Kispert", "rat": 3.85, "salary": 13975000, "trade_value": 10304537, "surplus": -3670463, "rank": 277}, {"team": "Washington", "player": "Tristan Vukcevic", "rat": 3.79, "salary": 636435, "trade_value": 10143946, "surplus": 9507511, "rank": 278}, {"team": "Memphis", "player": "Vince Williams Jr", "rat": 3.77, "salary": 2301587, "trade_value": 10090416, "surplus": 7788829, "rank": 279}, {"team": "Miami", "player": "Dru Smith", "rat": 3.77, "salary": 2378870, "trade_value": 10090416, "surplus": 7711546, "rank": 280}, {"team": "Orlando", "player": "Jalen Suggs", "rat": 3.77, "salary": 35000000, "trade_value": 10090416, "surplus": -24909584, "rank": 281}, {"team": "Boston", "player": "Jordan Walsh", "rat": 3.76, "salary": 2221677, "trade_value": 10063651, "surplus": 7841974, "rank": 282}, {"team": "Houston", "player": "Clint Capela", "rat": 3.74, "salary": 6700000, "trade_value": 10010121, "surplus": 3310121, "rank": 283}, {"team": "Phoenix", "player": "Nick Richards", "rat": 3.74, "salary": 5000000, "trade_value": 10010121, "surplus": 5010121, "rank": 284}, {"team": "Houston", "player": "Dorian Finney-Smith", "rat": 3.72, "salary": 12700000, "trade_value": 9956591, "surplus": -2743409, "rank": 285}, {"team": "Dallas", "player": "D'Angelo Russell", "rat": 3.69, "salary": 5685000, "trade_value": 9876296, "surplus": 4191296, "rank": 286}, {"team": "Houston", "player": "Josh Okogie", "rat": 3.68, "salary": 3080921, "trade_value": 9849531, "surplus": 6768610, "rank": 287}, {"team": "Philadelphia", "player": "Jabari Walker", "rat": 3.68, "salary": 636435, "trade_value": 9849531, "surplus": 9213096, "rank": 288}, {"team": "Utah", "player": "Sviatoslav Mykhailiuk", "rat": 3.67, "salary": 3675000, "trade_value": 9822766, "surplus": 6147766, "rank": 289}, {"team": "LA Lakers", "player": "Dalton Knecht", "rat": 3.66, "salary": 4010160, "trade_value": 9796001, "surplus": 5785841, "rank": 290}, {"team": "New York", "player": "Guerschon Yabusele", "rat": 3.66, "salary": 5500000, "trade_value": 9796001, "surplus": 4296001, "rank": 291}, {"team": "San Antonio", "player": "Kelly Olynyk", "rat": 3.64, "salary": 13445122, "trade_value": 9742471, "surplus": -3702651, "rank": 292}, {"team": "Toronto", "player": "Collin Murray-Boyles", "rat": 3.64, "salary": 6332520, "trade_value": 9742471, "surplus": 3409951, "rank": 293}, {"team": "Orlando", "player": "Jonathan Isaac", "rat": 3.62, "salary": 15000000, "trade_value": 9688941, "surplus": -5311059, "rank": 294}, {"team": "Utah", "player": "Kyle Anderson", "rat": 3.61, "salary": 9219512, "trade_value": 9662176, "surplus": 442664, "rank": 295}, {"team": "Detroit", "player": "Paul Reed", "rat": 3.6, "salary": 5335894, "trade_value": 9635411, "surplus": 4299517, "rank": 296}, {"team": "Brooklyn", "player": "Egor Demin", "rat": 3.58, "salary": 6889200, "trade_value": 9581881, "surplus": 2692681, "rank": 297}, {"team": "Philadelphia", "player": "Justin Edwards", "rat": 3.57, "salary": 2048494, "trade_value": 9555116, "surplus": 7506622, "rank": 298}, {"team": "Charlotte", "player": "Tidjane Salaun", "rat": 3.56, "salary": 7863240, "trade_value": 9528351, "surplus": 1665111, "rank": 299}, {"team": "Milwaukee", "player": "Taurean Prince", "rat": 3.55, "salary": 3303774, "trade_value": 9501586, "surplus": 6197812, "rank": 300}, {"team": "Portland", "player": "Caleb Love", "rat": 3.55, "salary": 636435, "trade_value": 9501586, "surplus": 8865151, "rank": 301}, {"team": "Portland", "player": "Kris Murray", "rat": 3.51, "salary": 3132000, "trade_value": 9394526, "surplus": 6262526, "rank": 302}, {"team": "Toronto", "player": "Ochai Agbaji", "rat": 3.49, "salary": 6383525, "trade_value": 9340996, "surplus": 2957471, "rank": 303}, {"team": "Detroit", "player": "Daniss Jenkins", "rat": 3.48, "salary": 636435, "trade_value": 9314230, "surplus": 8677795, "rank": 304}, {"team": "LA Lakers", "player": "Gabe Vincent", "rat": 3.48, "salary": 11500000, "trade_value": 9314230, "surplus": -2185770, "rank": 305}, {"team": "Houston", "player": "Fred VanVleet", "rat": 3.46, "salary": 25000000, "trade_value": 9260700, "surplus": -15739300, "rank": 306}, {"team": "Brooklyn", "player": "Jalen Wilson", "rat": 3.42, "salary": 2221677, "trade_value": 9153640, "surplus": 6931963, "rank": 307}, {"team": "Houston", "player": "Aaron Holiday", "rat": 3.42, "salary": 3080921, "trade_value": 9153640, "surplus": 6072719, "rank": 308}, {"team": "Golden State", "player": "Will Richard", "rat": 3.35, "salary": 1272870, "trade_value": 8966285, "surplus": 7693415, "rank": 309}, {"team": "Sacramento", "player": "Maxime Raynaud", "rat": 3.33, "salary": 1272870, "trade_value": 8912755, "surplus": 7639885, "rank": 310}, {"team": "Washington", "player": "Tre Johnson", "rat": 3.31, "salary": 8237640, "trade_value": 8859225, "surplus": 621585, "rank": 311}, {"team": "LA Lakers", "player": "Nick Smith", "rat": 3.24, "salary": 636435, "trade_value": 8671870, "surplus": 8035435, "rank": 312}, {"team": "Portland", "player": "Robert Williams", "rat": 3.24, "salary": 13285713, "trade_value": 8671870, "surplus": -4613843, "rank": 313}, {"team": "New Orleans", "player": "Kevon Looney", "rat": 3.23, "salary": 8000000, "trade_value": 8645105, "surplus": 645105, "rank": 314}, {"team": "Boston", "player": "Baylor Scheierman", "rat": 3.19, "salary": 2619000, "trade_value": 8538045, "surplus": 5919045, "rank": 315}, {"team": "", "player": "Keon Johnson", "rat": 3.17, "salary": 0, "trade_value": 8484515, "surplus": 8484515, "rank": 316}, {"team": "Oklahoma City", "player": "Branden Carlson", "rat": 3.1, "salary": 636435, "trade_value": 8297159, "surplus": 7660724, "rank": 317}, {"team": "Boston", "player": "Josh Minott", "rat": 3.09, "salary": 2378870, "trade_value": 8270394, "surplus": 5891524, "rank": 318}, {"team": "New York", "player": "Tyler Kolek", "rat": 3.09, "salary": 2191897, "trade_value": 8270394, "surplus": 6078497, "rank": 319}, {"team": "Denver", "player": "Spencer Jones", "rat": 3.08, "salary": 636435, "trade_value": 8243629, "surplus": 7607194, "rank": 320}, {"team": "Utah", "player": "Georges Niang", "rat": 3.05, "salary": 8200000, "trade_value": 8163334, "surplus": -36666, "rank": 321}, {"team": "Golden State", "player": "Trayce Jackson-Davis", "rat": 3.02, "salary": 2221677, "trade_value": 8083039, "surplus": 5861362, "rank": 322}, {"team": "Minnesota", "player": "Bones Hyland", "rat": 3.0, "salary": 2461463, "trade_value": 8029509, "surplus": 5568046, "rank": 323}, {"team": "Washington", "player": "Bilal Coulibaly", "rat": 3.0, "salary": 7275600, "trade_value": 8029509, "surplus": 753909, "rank": 324}, {"team": "LA Clippers", "player": "Jordan Miller", "rat": 2.99, "salary": 636435, "trade_value": 8002744, "surplus": 7366309, "rank": 325}, {"team": "Memphis", "player": "GG Jackson", "rat": 2.96, "salary": 2221677, "trade_value": 7922449, "surplus": 5700772, "rank": 326}, {"team": "Brooklyn", "player": "Cam Thomas", "rat": 2.95, "salary": 5993172, "trade_value": 7895684, "surplus": 1902512, "rank": 327}, {"team": "Utah", "player": "Ace Bailey", "rat": 2.92, "salary": 9069840, "trade_value": 7815389, "surplus": -1254451, "rank": 328}, {"team": "Cleveland", "player": "Nae'Qwan Tomlin", "rat": 2.86, "salary": 636435, "trade_value": 7654799, "surplus": 7018364, "rank": 329}, {"team": "Charlotte", "player": "Sion James", "rat": 2.83, "salary": 2296274, "trade_value": 7574504, "surplus": 5278230, "rank": 330}, {"team": "Orlando", "player": "Orlando Robinson", "rat": 2.82, "salary": 636435, "trade_value": 7547738, "surplus": 6911303, "rank": 331}, {"team": "LA Clippers", "player": "Bradley Beal", "rat": 2.81, "salary": 5354000, "trade_value": 7520973, "surplus": 2166973, "rank": 332}, {"team": "Toronto", "player": "Jamison Battle", "rat": 2.79, "salary": 1955377, "trade_value": 7467443, "surplus": 5512066, "rank": 333}, {"team": "Dallas", "player": "Dwight Powell", "rat": 2.76, "salary": 4000000, "trade_value": 7387148, "surplus": 3387148, "rank": 334}, {"team": "Washington", "player": "Cam Whitmore", "rat": 2.75, "salary": 3539760, "trade_value": 7360383, "surplus": 3820623, "rank": 335}, {"team": "Brooklyn", "player": "Haywood Highsmith", "rat": 2.67, "salary": 5616000, "trade_value": 7146263, "surplus": 1530263, "rank": 336}, {"team": "Cleveland", "player": "Lonzo Ball", "rat": 2.66, "salary": 10000000, "trade_value": 7119498, "surplus": -2880502, "rank": 337}, {"team": "Memphis", "player": "John Konchar", "rat": 2.59, "salary": 6165000, "trade_value": 6932143, "surplus": 767143, "rank": 338}, {"team": "Chicago", "player": "Dalen Terry", "rat": 2.58, "salary": 5399118, "trade_value": 6905378, "surplus": 1506260, "rank": 339}, {"team": "Toronto", "player": "Jonathan Mogbo", "rat": 2.58, "salary": 1955377, "trade_value": 6905378, "surplus": 4950001, "rank": 340}, {"team": "Dallas", "player": "Kyrie Irving", "rat": 2.55, "salary": 36566002, "trade_value": 6825083, "surplus": -29740919, "rank": 341}, {"team": "Golden State", "player": "Pat Spencer", "rat": 2.55, "salary": 636435, "trade_value": 6825083, "surplus": 6188648, "rank": 342}, {"team": "Golden State", "player": "De'Anthony Melton", "rat": 2.52, "salary": 3080921, "trade_value": 6744788, "surplus": 3663867, "rank": 343}, {"team": "", "player": "Jeremiah Robinson-Earl", "rat": 2.52, "salary": 0, "trade_value": 6744788, "surplus": 6744788, "rank": 344}, {"team": "", "player": "Trey Lyles", "rat": 2.52, "salary": 0, "trade_value": 6744788, "surplus": 6744788, "rank": 345}, {"team": "Charlotte", "player": "Josh Green", "rat": 2.5, "salary": 13666667, "trade_value": 6691258, "surplus": -6975409, "rank": 346}, {"team": "Detroit", "player": "Jaden Ivey", "rat": 2.48, "salary": 10107163, "trade_value": 6637727, "surplus": -3469436, "rank": 347}, {"team": "Denver", "player": "Julian Strawther", "rat": 2.47, "salary": 2674200, "trade_value": 6610962, "surplus": 3936762, "rank": 348}, {"team": "Utah", "player": "Walter Clayton", "rat": 2.43, "salary": 3991320, "trade_value": 6503902, "surplus": 2512582, "rank": 349}, {"team": "Dallas", "player": "Jaden Hardy", "rat": 2.42, "salary": 6000000, "trade_value": 6477137, "surplus": 477137, "rank": 350}, {"team": "Chicago", "player": "Julian Phillips", "rat": 2.41, "salary": 2221677, "trade_value": 6450372, "surplus": 4228695, "rank": 351}, {"team": "Dallas", "player": "Ryan Nembhard", "rat": 2.41, "salary": 636435, "trade_value": 6450372, "surplus": 5813937, "rank": 352}, {"team": "Minnesota", "player": "Johnny Juzang", "rat": 2.4, "salary": 636435, "trade_value": 6423607, "surplus": 5787172, "rank": 353}, {"team": "Toronto", "player": "AJ Lawson", "rat": 2.39, "salary": 636435, "trade_value": 6396842, "surplus": 5760407, "rank": 354}, {"team": "Charlotte", "player": "Mason Plumlee", "rat": 2.37, "salary": 3634153, "trade_value": 6343312, "surplus": 2709159, "rank": 355}, {"team": "LA Clippers", "player": "Kobe Sanders", "rat": 2.35, "salary": 636435, "trade_value": 6289782, "surplus": 5653347, "rank": 356}, {"team": "Atlanta", "player": "Duop Reath", "rat": 2.34, "salary": 2221677, "trade_value": 6263017, "surplus": 4041340, "rank": 357}, {"team": "", "player": "Jared Butler", "rat": 2.34, "salary": 0, "trade_value": 6263017, "surplus": 6263017, "rank": 358}, {"team": "Detroit", "player": "Marcus Sasser", "rat": 2.33, "salary": 2886720, "trade_value": 6236252, "surplus": 3349532, "rank": 359}, {"team": "New Orleans", "player": "Jordan Hawkins", "rat": 2.31, "salary": 4741320, "trade_value": 6182722, "surplus": 1441402, "rank": 360}, {"team": "Portland", "player": "Scoot Henderson", "rat": 2.31, "salary": 10748040, "trade_value": 6182722, "surplus": -4565318, "rank": 361}, {"team": "Milwaukee", "player": "Amir Coffey", "rat": 2.29, "salary": 2874436, "trade_value": 6129192, "surplus": 3254756, "rank": 362}, {"team": "Minnesota", "player": "Terrence Shannon", "rat": 2.23, "salary": 2674080, "trade_value": 5968602, "surplus": 3294522, "rank": 363}, {"team": "Portland", "player": "Sidy Cissoko", "rat": 2.23, "salary": 636435, "trade_value": 5968602, "surplus": 5332167, "rank": 364}, {"team": "", "player": "Tony Bradley", "rat": 2.23, "salary": 0, "trade_value": 5968602, "surplus": 5968602, "rank": 365}, {"team": "Indiana", "player": "Isaiah Jackson", "rat": 2.2, "salary": 7600000, "trade_value": 5888307, "surplus": -1711693, "rank": 366}, {"team": "", "player": "Richaun Holmes", "rat": 2.2, "salary": 0, "trade_value": 5888307, "surplus": 5888307, "rank": 367}, {"team": "Memphis", "player": "Brandon Clarke", "rat": 2.17, "salary": 12500000, "trade_value": 5808012, "surplus": -6691988, "rank": 368}, {"team": "Sacramento", "player": "Drew Eubanks", "rat": 2.17, "salary": 3080921, "trade_value": 5808012, "surplus": 2727091, "rank": 369}, {"team": "", "player": "Alec Burks", "rat": 2.16, "salary": 0, "trade_value": 5781247, "surplus": 5781247, "rank": 370}, {"team": "New Orleans", "player": "Herb Jones", "rat": 2.12, "salary": 13937574, "trade_value": 5674186, "surplus": -8263388, "rank": 371}, {"team": "Phoenix", "player": "Jamaree Bouyea", "rat": 2.11, "salary": 469702, "trade_value": 5647421, "surplus": 5177719, "rank": 372}, {"team": "Atlanta", "player": "Keaton Wallace", "rat": 2.1, "salary": 2296274, "trade_value": 5620656, "surplus": 3324382, "rank": 373}, {"team": "Boston", "player": "Hugo Gonzalez", "rat": 2.1, "salary": 2783880, "trade_value": 5620656, "surplus": 2836776, "rank": 374}, {"team": "Brooklyn", "player": "Danny Wolf", "rat": 2.09, "salary": 2801280, "trade_value": 5593891, "surplus": 2792611, "rank": 375}, {"team": "Dallas", "player": "Caleb Martin", "rat": 2.08, "salary": 9594044, "trade_value": 5567126, "surplus": -4026918, "rank": 376}, {"team": "Indiana", "player": "Quenton Jackson", "rat": 2.06, "salary": 636435, "trade_value": 5513596, "surplus": 4877161, "rank": 377}, {"team": "", "player": "Dalano Banton", "rat": 2.06, "salary": 0, "trade_value": 5513596, "surplus": 5513596, "rank": 378}, {"team": "Utah", "player": "Kevin Love", "rat": 2.01, "salary": 4150000, "trade_value": 5379771, "surplus": 1229771, "rank": 379}, {"team": "Oklahoma City", "player": "Ousmane Dieng", "rat": 1.99, "salary": 6670882, "trade_value": 5326241, "surplus": -1344641, "rank": 380}, {"team": "", "player": "Cory Joseph", "rat": 1.96, "salary": 0, "trade_value": 5245946, "surplus": 5245946, "rank": 381}, {"team": "Indiana", "player": "Johnny Furphy", "rat": 1.92, "salary": 1955377, "trade_value": 5138886, "surplus": 3183509, "rank": 382}, {"team": "", "player": "Cameron Payne", "rat": 1.92, "salary": 0, "trade_value": 5138886, "surplus": 5138886, "rank": 383}, {"team": "Philadelphia", "player": "Jared McCain", "rat": 1.9, "salary": 4221360, "trade_value": 5085356, "surplus": 863996, "rank": 384}, {"team": "Utah", "player": "Cody Williams", "rat": 1.89, "salary": 5742480, "trade_value": 5058591, "surplus": -683889, "rank": 385}, {"team": "Atlanta", "player": "Caleb Houstan", "rat": 1.86, "salary": 636435, "trade_value": 4978296, "surplus": 4341861, "rank": 386}, {"team": "Charlotte", "player": "KJ Simpson", "rat": 1.85, "salary": 636435, "trade_value": 4951531, "surplus": 4315096, "rank": 387}, {"team": "New Orleans", "player": "DeAndre Jordan", "rat": 1.85, "salary": 3571495, "trade_value": 4951531, "surplus": 1380036, "rank": 388}, {"team": "Dallas", "player": "Dante Exum", "rat": 1.83, "salary": 3303774, "trade_value": 4898001, "surplus": 1594227, "rank": 389}, {"team": "Milwaukee", "player": "Gary Harris", "rat": 1.83, "salary": 3634153, "trade_value": 4898001, "surplus": 1263848, "rank": 390}, {"team": "San Antonio", "player": "Bismack Biyombo", "rat": 1.82, "salary": 3634153, "trade_value": 4871235, "surplus": 1237082, "rank": 391}, {"team": "Portland", "player": "Matisse Thybulle", "rat": 1.81, "salary": 11550000, "trade_value": 4844470, "surplus": -6705530, "rank": 392}, {"team": "", "player": "Jeff Dowtin", "rat": 1.81, "salary": 0, "trade_value": 4844470, "surplus": 4844470, "rank": 393}, {"team": "Charlotte", "player": "Pat Connaughton", "rat": 1.8, "salary": 9423869, "trade_value": 4817705, "surplus": -4606164, "rank": 394}, {"team": "", "player": "Ricky Council IV", "rat": 1.79, "salary": 0, "trade_value": 4790940, "surplus": 4790940, "rank": 395}, {"team": "", "player": "Bol Bol", "rat": 1.79, "salary": 0, "trade_value": 4790940, "surplus": 4790940, "rank": 396}, {"team": "Milwaukee", "player": "Jericho Sims", "rat": 1.77, "salary": 2461463, "trade_value": 4737410, "surplus": 2275947, "rank": 397}, {"team": "Orlando", "player": "Noah Penda", "rat": 1.77, "salary": 1272870, "trade_value": 4737410, "surplus": 3464540, "rank": 398}, {"team": "Houston", "player": "Jae'Sean Tate", "rat": 1.75, "salary": 2667947, "trade_value": 4683880, "surplus": 2015933, "rank": 399}, {"team": "Indiana", "player": "Micah Potter", "rat": 1.7, "salary": 1527805, "trade_value": 4550055, "surplus": 3022250, "rank": 400}, {"team": "Sacramento", "player": "Nique Clifford", "rat": 1.69, "salary": 3108120, "trade_value": 4523290, "surplus": 1415170, "rank": 401}, {"team": "Golden State", "player": "Seth Curry", "rat": 1.67, "salary": 2777830, "trade_value": 4469760, "surplus": 1691930, "rank": 402}, {"team": "Brooklyn", "player": "Drake Powell", "rat": 1.66, "salary": 3372240, "trade_value": 4442995, "surplus": 1070755, "rank": 403}, {"team": "New Orleans", "player": "Bryce McGowens", "rat": 1.66, "salary": 636435, "trade_value": 4442995, "surplus": 3806560, "rank": 404}, {"team": "Memphis", "player": "Olivier-Maxence Prosper", "rat": 1.65, "salary": 636435, "trade_value": 4416230, "surplus": 3779795, "rank": 405}, {"team": "Portland", "player": "Blake Wesley", "rat": 1.65, "salary": 2378870, "trade_value": 4416230, "surplus": 2037360, "rank": 406}, {"team": "", "player": "Kai Jones", "rat": 1.64, "salary": 0, "trade_value": 4389465, "surplus": 4389465, "rank": 407}, {"team": "Minnesota", "player": "Rob Dillingham", "rat": 1.61, "salary": 6576120, "trade_value": 4309170, "surplus": -2266950, "rank": 408}, {"team": "Washington", "player": "Malaki Branham", "rat": 1.61, "salary": 4962033, "trade_value": 4309170, "surplus": -652863, "rank": 409}, {"team": "Washington", "player": "Will Riley", "rat": 1.61, "salary": 3512520, "trade_value": 4309170, "surplus": 796650, "rank": 410}, {"team": "", "player": "Lonnie Walker", "rat": 1.6, "salary": 0, "trade_value": 4282405, "surplus": 4282405, "rank": 411}, {"team": "Sacramento", "player": "Dylan Cardwell", "rat": 1.58, "salary": 636435, "trade_value": 4228875, "surplus": 3592440, "rank": 412}, {"team": "Charlotte", "player": "Antonio Reeves", "rat": 1.57, "salary": 636435, "trade_value": 4202110, "surplus": 3565675, "rank": 413}, {"team": "Atlanta", "player": "Asa Newell", "rat": 1.55, "salary": 3237480, "trade_value": 4148580, "surplus": 911100, "rank": 414}, {"team": "Cleveland", "player": "Tyrese Proctor", "rat": 1.51, "salary": 1272870, "trade_value": 4041520, "surplus": 2768650, "rank": 415}, {"team": "Dallas", "player": "Moussa Cisse", "rat": 1.51, "salary": 636435, "trade_value": 4041520, "surplus": 3405085, "rank": 416}, {"team": "", "player": "Kessler Edwards", "rat": 1.5, "salary": 0, "trade_value": 4014755, "surplus": 4014755, "rank": 417}, {"team": "Orlando", "player": "Jett Howard", "rat": 1.45, "salary": 5529720, "trade_value": 3880929, "surplus": -1648791, "rank": 418}, {"team": "New York", "player": "Dillon Jones", "rat": 1.44, "salary": 267022, "trade_value": 3854164, "surplus": 3587142, "rank": 419}, {"team": "Sacramento", "player": "Devin Carter", "rat": 1.41, "salary": 4923720, "trade_value": 3773869, "surplus": -1149851, "rank": 420}, {"team": "Portland", "player": "Rayan Rupert", "rat": 1.4, "salary": 2221677, "trade_value": 3747104, "surplus": 1525427, "rank": 421}, {"team": "", "player": "Jevon Carter", "rat": 1.4, "salary": 0, "trade_value": 3747104, "surplus": 3747104, "rank": 422}, {"team": "Charlotte", "player": "Tre Mann", "rat": 1.39, "salary": 8000000, "trade_value": 3720339, "surplus": -4279661, "rank": 423}, {"team": "Houston", "player": "Jeff Green", "rat": 1.39, "salary": 3634153, "trade_value": 3720339, "surplus": 86186, "rank": 424}, {"team": "", "player": "DaQuan Jeffries", "rat": 1.38, "salary": 0, "trade_value": 3693574, "surplus": 3693574, "rank": 425}, {"team": "", "player": "Talen Horton-Tucker", "rat": 1.38, "salary": 0, "trade_value": 3693574, "surplus": 3693574, "rank": 426}, {"team": "LA Lakers", "player": "Drew Timme", "rat": 1.37, "salary": 447182, "trade_value": 3666809, "surplus": 3219627, "rank": 427}, {"team": "New Orleans", "player": "Micah Peavy", "rat": 1.37, "salary": 1272870, "trade_value": 3666809, "surplus": 2393939, "rank": 428}, {"team": "Washington", "player": "AJ Johnson", "rat": 1.36, "salary": 3090480, "trade_value": 3640044, "surplus": 549564, "rank": 429}, {"team": "Cleveland", "player": "Larry Nance Jr", "rat": 1.34, "salary": 3634153, "trade_value": 3586514, "surplus": -47639, "rank": 430}, {"team": "Orlando", "player": "Jase Richardson", "rat": 1.32, "salary": 2983320, "trade_value": 3532984, "surplus": 549664, "rank": 431}, {"team": "LA Clippers", "player": "Kobe Brown", "rat": 1.27, "salary": 2654880, "trade_value": 3399159, "surplus": 744279, "rank": 432}, {"team": "Utah", "player": "Taylor Hendricks", "rat": 1.27, "salary": 6127080, "trade_value": 3399159, "surplus": -2727921, "rank": 433}, {"team": "", "player": "Colby Jones", "rat": 1.26, "salary": 0, "trade_value": 3372394, "surplus": 3372394, "rank": 434}, {"team": "LA Clippers", "player": "Cam Christie", "rat": 1.23, "salary": 1955377, "trade_value": 3292099, "surplus": 1336722, "rank": 435}, {"team": "", "player": "Jared Rhoden", "rat": 1.23, "salary": 0, "trade_value": 3292099, "surplus": 3292099, "rank": 436}, {"team": "Miami", "player": "Terry Rozier", "rat": 1.2, "salary": 26643031, "trade_value": 3211804, "surplus": -23431227, "rank": 437}, {"team": "", "player": "Ben Simmons", "rat": 1.19, "salary": 0, "trade_value": 3185039, "surplus": 3185039, "rank": 438}, {"team": "Orlando", "player": "Colin Castleton", "rat": 1.18, "salary": 636435, "trade_value": 3158274, "surplus": 2521839, "rank": 439}, {"team": "New York", "player": "Ariel Hukporti", "rat": 1.17, "salary": 1955377, "trade_value": 3131509, "surplus": 1176132, "rank": 440}, {"team": "", "player": "Tosan Evbuomwan", "rat": 1.17, "salary": 0, "trade_value": 3131509, "surplus": 3131509, "rank": 441}, {"team": "LA Clippers", "player": "Yanic Konan Niederhauser", "rat": 1.12, "salary": 2743800, "trade_value": 2997683, "surplus": 253883, "rank": 442}, {"team": "Atlanta", "player": "Christian Koloko", "rat": 1.1, "salary": 279891, "trade_value": 2944153, "surplus": 2664262, "rank": 443}, {"team": "Orlando", "player": "Jamal Cain", "rat": 1.09, "salary": 636435, "trade_value": 2917388, "surplus": 2280953, "rank": 444}, {"team": "Utah", "player": "Oscar Tshiebwe", "rat": 1.07, "salary": 636435, "trade_value": 2863858, "surplus": 2227423, "rank": 445}, {"team": "", "player": "Delon Wright", "rat": 1.07, "salary": 0, "trade_value": 2863858, "surplus": 2863858, "rank": 446}, {"team": "", "player": "Keion Brooks", "rat": 1.06, "salary": 0, "trade_value": 2837093, "surplus": 2837093, "rank": 447}, {"team": "Denver", "player": "Hunter Tyson", "rat": 1.03, "salary": 2221677, "trade_value": 2756798, "surplus": 535121, "rank": 448}, {"team": "Brooklyn", "player": "Nolan Traore", "rat": 1.01, "salary": 3811560, "trade_value": 2703268, "surplus": -1108292, "rank": 449}, {"team": "San Antonio", "player": "Jordan McLaughlin", "rat": 1.01, "salary": 2874436, "trade_value": 2703268, "surplus": -171168, "rank": 450}, {"team": "Charlotte", "player": "PJ Hall", "rat": 0.99, "salary": 353885, "trade_value": 2649738, "surplus": 2295853, "rank": 451}, {"team": "Miami", "player": "Kasparas Jakucionis", "rat": 0.94, "salary": 3658800, "trade_value": 2515913, "surplus": -1142887, "rank": 452}, {"team": "", "player": "Garrison Mathews", "rat": 0.94, "salary": 0, "trade_value": 2515913, "surplus": 2515913, "rank": 453}, {"team": "Minnesota", "player": "Joan Beringer", "rat": 0.92, "salary": 4201080, "trade_value": 2462383, "surplus": -1738697, "rank": 454}, {"team": "Houston", "player": "JD Davison", "rat": 0.91, "salary": 636435, "trade_value": 2435618, "surplus": 1799183, "rank": 455}, {"team": "", "player": "Torrey Craig", "rat": 0.9, "salary": 0, "trade_value": 2408853, "surplus": 2408853, "rank": 456}, {"team": "Dallas", "player": "Dereck Lively", "rat": 0.88, "salary": 5253360, "trade_value": 2355323, "surplus": -2898037, "rank": 457}, {"team": "Milwaukee", "player": "Andre Jackson", "rat": 0.88, "salary": 2221677, "trade_value": 2355323, "surplus": 133646, "rank": 458}, {"team": "San Antonio", "player": "Lindy Waters III", "rat": 0.87, "salary": 2461463, "trade_value": 2328558, "surplus": -132905, "rank": 459}, {"team": "New York", "player": "Mohamed Diawara", "rat": 0.86, "salary": 1272870, "trade_value": 2301793, "surplus": 1028923, "rank": 460}, {"team": "Washington", "player": "Anthony Gill", "rat": 0.86, "salary": 2667947, "trade_value": 2301793, "surplus": -366154, "rank": 461}, {"team": "Charlotte", "player": "Liam McNeeley", "rat": 0.85, "salary": 2763960, "trade_value": 2275028, "surplus": -488932, "rank": 462}, {"team": "Phoenix", "player": "Isaiah Livers", "rat": 0.83, "salary": 636435, "trade_value": 2221498, "surplus": 1585063, "rank": 463}, {"team": "", "player": "KJ Martin", "rat": 0.83, "salary": 0, "trade_value": 2221498, "surplus": 2221498, "rank": 464}, {"team": "Boston", "player": "Chris Boucher", "rat": 0.82, "salary": 3287409, "trade_value": 2194732, "surplus": -1092677, "rank": 465}, {"team": "LA Lakers", "player": "Bronny James", "rat": 0.81, "salary": 1955377, "trade_value": 2167967, "surplus": 212590, "rank": 466}, {"team": "Miami", "player": "Keshad Johnson", "rat": 0.8, "salary": 1955377, "trade_value": 2141202, "surplus": 185825, "rank": 467}, {"team": "", "player": "Maxwell Lewis", "rat": 0.79, "salary": 0, "trade_value": 2114437, "surplus": 2114437, "rank": 468}, {"team": "Miami", "player": "Myron Gardner", "rat": 0.78, "salary": 636435, "trade_value": 2087672, "surplus": 1451237, "rank": 469}, {"team": "Milwaukee", "player": "Pete Nance", "rat": 0.76, "salary": 636435, "trade_value": 2034142, "surplus": 1397707, "rank": 470}, {"team": "Minnesota", "player": "Leonard Miller", "rat": 0.76, "salary": 2221677, "trade_value": 2034142, "surplus": -187535, "rank": 471}, {"team": "Detroit", "player": "Wendell Moore", "rat": 0.74, "salary": 495439, "trade_value": 1980612, "surplus": 1485173, "rank": 472}, {"team": "New York", "player": "Trey Jemison", "rat": 0.74, "salary": 636435, "trade_value": 1980612, "surplus": 1344177, "rank": 473}, {"team": "", "player": "Shake Milton", "rat": 0.73, "salary": 0, "trade_value": 1953847, "surplus": 1953847, "rank": 474}, {"team": "San Antonio", "player": "Carter Bryant", "rat": 0.72, "salary": 4900320, "trade_value": 1927082, "surplus": -2973238, "rank": 475}, {"team": "", "player": "Tristan Thompson", "rat": 0.72, "salary": 0, "trade_value": 1927082, "surplus": 1927082, "rank": 476}, {"team": "", "player": "Lamar Stevens", "rat": 0.72, "salary": 0, "trade_value": 1927082, "surplus": 1927082, "rank": 477}, {"team": "", "player": "Alex Reese", "rat": 0.68, "salary": 0, "trade_value": 1820022, "surplus": 1820022, "rank": 478}, {"team": "", "player": "Kevin Knox", "rat": 0.67, "salary": 0, "trade_value": 1793257, "surplus": 1793257, "rank": 479}, {"team": "Indiana", "player": "Ethan Thompson", "rat": 0.62, "salary": 431096, "trade_value": 1659432, "surplus": 1228336, "rank": 480}, {"team": "Memphis", "player": "Javon Small", "rat": 0.62, "salary": 636435, "trade_value": 1659432, "surplus": 1022997, "rank": 481}, {"team": "", "player": "Chuma Okeke", "rat": 0.62, "salary": 0, "trade_value": 1659432, "surplus": 1659432, "rank": 482}, {"team": "Detroit", "player": "Isaac Jones", "rat": 0.61, "salary": 1955377, "trade_value": 1632667, "surplus": -322710, "rank": 483}, {"team": "Detroit", "player": "Chaz Lanier", "rat": 0.61, "salary": 1372870, "trade_value": 1632667, "surplus": 259797, "rank": 484}, {"team": "Oklahoma City", "player": "Chris Youngblood", "rat": 0.61, "salary": 636435, "trade_value": 1632667, "surplus": 996232, "rank": 485}, {"team": "", "player": "Cody Martin", "rat": 0.61, "salary": 0, "trade_value": 1632667, "surplus": 1632667, "rank": 486}, {"team": "Phoenix", "player": "Rasheer Fleming", "rat": 0.6, "salary": 1272870, "trade_value": 1605902, "surplus": 333032, "rank": 487}, {"team": "", "player": "Marcus Bagley", "rat": 0.6, "salary": 0, "trade_value": 1605902, "surplus": 1605902, "rank": 488}, {"team": "Washington", "player": "Jamir Watkins", "rat": 0.59, "salary": 636435, "trade_value": 1579137, "surplus": 942702, "rank": 489}, {"team": "", "player": "Jalen Hood-Schifino", "rat": 0.58, "salary": 0, "trade_value": 1552372, "surplus": 1552372, "rank": 490}, {"team": "", "player": "Damion Baugh", "rat": 0.58, "salary": 0, "trade_value": 1552372, "surplus": 1552372, "rank": 491}, {"team": "Oklahoma City", "player": "Brooks Barnhizer", "rat": 0.57, "salary": 636435, "trade_value": 1525607, "surplus": 889172, "rank": 492}, {"team": "", "player": "Elfrid Payton", "rat": 0.56, "salary": 0, "trade_value": 1498842, "surplus": 1498842, "rank": 493}, {"team": "", "player": "Trevelin Queen", "rat": 0.56, "salary": 0, "trade_value": 1498842, "surplus": 1498842, "rank": 494}, {"team": "", "player": "Markelle Fultz", "rat": 0.55, "salary": 0, "trade_value": 1472077, "surplus": 1472077, "rank": 495}, {"team": "", "player": "Malcolm Brogdon", "rat": 0.54, "salary": 0, "trade_value": 1445312, "surplus": 1445312, "rank": 496}, {"team": "Denver", "player": "DaRon Holmes", "rat": 0.53, "salary": 3218760, "trade_value": 1418547, "surplus": -1800213, "rank": 497}, {"team": "", "player": "Moses Brown", "rat": 0.53, "salary": 0, "trade_value": 1418547, "surplus": 1418547, "rank": 498}, {"team": "", "player": "Jaylen Martin", "rat": 0.53, "salary": 0, "trade_value": 1418547, "surplus": 1418547, "rank": 499}, {"team": "", "player": "Taj Gibson", "rat": 0.51, "salary": 0, "trade_value": 1365017, "surplus": 1365017, "rank": 500}, {"team": "", "player": "Reece Beekman", "rat": 0.5, "salary": 0, "trade_value": 1338252, "surplus": 1338252, "rank": 501}, {"team": "", "player": "Monte Morris", "rat": 0.5, "salary": 0, "trade_value": 1338252, "surplus": 1338252, "rank": 502}, {"team": "Atlanta", "player": "RayJ Dennis", "rat": 0.49, "salary": 331365, "trade_value": 1311486, "surplus": 980121, "rank": 503}, {"team": "Toronto", "player": "Garrett Temple", "rat": 0.49, "salary": 3634153, "trade_value": 1311486, "surplus": -2322667, "rank": 504}, {"team": "", "player": "Killian Hayes", "rat": 0.49, "salary": 0, "trade_value": 1311486, "surplus": 1311486, "rank": 505}, {"team": "", "player": "Adam Flagler", "rat": 0.48, "salary": 0, "trade_value": 1284721, "surplus": 1284721, "rank": 506}, {"team": "", "player": "Cole Swider", "rat": 0.48, "salary": 0, "trade_value": 1284721, "surplus": 1284721, "rank": 507}, {"team": "San Antonio", "player": "David Jones", "rat": 0.47, "salary": 636435, "trade_value": 1257956, "surplus": 621521, "rank": 508}, {"team": "", "player": "Jaden Springer", "rat": 0.47, "salary": 0, "trade_value": 1257956, "surplus": 1257956, "rank": 509}, {"team": "Brooklyn", "player": "Ben Saraf", "rat": 0.46, "salary": 2884560, "trade_value": 1231191, "surplus": -1653369, "rank": 510}, {"team": "LA Lakers", "player": "Maxi Kleber", "rat": 0.46, "salary": 11000000, "trade_value": 1231191, "surplus": -9768809, "rank": 511}, {"team": "", "player": "JT Thor", "rat": 0.43, "salary": 0, "trade_value": 1150896, "surplus": 1150896, "rank": 512}, {"team": "Charlotte", "player": "Grant Williams", "rat": 0.42, "salary": 13645500, "trade_value": 1124131, "surplus": -12521369, "rank": 513}, {"team": "Detroit", "player": "Tolu Smith", "rat": 0.42, "salary": 636435, "trade_value": 1124131, "surplus": 487696, "rank": 514}, {"team": "", "player": "Lester Quinones", "rat": 0.41, "salary": 0, "trade_value": 1097366, "surplus": 1097366, "rank": 515}, {"team": "New York", "player": "Kevin McCullar", "rat": 0.4, "salary": 636435, "trade_value": 1070601, "surplus": 434166, "rank": 516}, {"team": "", "player": "Patrick Mills", "rat": 0.39, "salary": 0, "trade_value": 1043836, "surplus": 1043836, "rank": 517}, {"team": "", "player": "Oshae Brissett", "rat": 0.38, "salary": 0, "trade_value": 1017071, "surplus": 1017071, "rank": 518}, {"team": "", "player": "Dariq Whitehead", "rat": 0.38, "salary": 0, "trade_value": 1017071, "surplus": 1017071, "rank": 519}, {"team": "Sacramento", "player": "Doug McDermott", "rat": 0.37, "salary": 3634153, "trade_value": 990306, "surplus": -2643847, "rank": 520}, {"team": "Orlando", "player": "Moritz Wagner", "rat": 0.35, "salary": 5000000, "trade_value": 936776, "surplus": -4063224, "rank": 521}, {"team": "Boston", "player": "Amari Williams", "rat": 0.32, "salary": 636435, "trade_value": 856481, "surplus": 220046, "rank": 522}, {"team": "Philadelphia", "player": "MarJon Beauchamp", "rat": 0.32, "salary": 347451, "trade_value": 856481, "surplus": 509030, "rank": 523}, {"team": "", "player": "Chris Livingston", "rat": 0.32, "salary": 0, "trade_value": 856481, "surplus": 856481, "rank": 524}, {"team": "Chicago", "player": "Yuki Kawamura", "rat": 0.3, "salary": 312062, "trade_value": 802951, "surplus": 490889, "rank": 525}, {"team": "LA Clippers", "player": "TyTy Washington", "rat": 0.3, "salary": 344234, "trade_value": 802951, "surplus": 458717, "rank": 526}, {"team": "", "player": "Alex Ducas", "rat": 0.3, "salary": 0, "trade_value": 802951, "surplus": 802951, "rank": 527}, {"team": "", "player": "Luke Travers", "rat": 0.3, "salary": 0, "trade_value": 802951, "surplus": 802951, "rank": 528}, {"team": "", "player": "Jackson Rowe", "rat": 0.3, "salary": 0, "trade_value": 802951, "surplus": 802951, "rank": 529}, {"team": "Toronto", "player": "Alijah Martin", "rat": 0.29, "salary": 636435, "trade_value": 776186, "surplus": 139751, "rank": 530}, {"team": "Atlanta", "player": "N'Faly Dante", "rat": 0.28, "salary": 2048494, "trade_value": 749421, "surplus": -1299073, "rank": 531}, {"team": "Philadelphia", "player": "Eric Gordon", "rat": 0.28, "salary": 3634153, "trade_value": 749421, "surplus": -2884732, "rank": 532}, {"team": "", "player": "Jacob Toppin", "rat": 0.28, "salary": 0, "trade_value": 749421, "surplus": 749421, "rank": 533}, {"team": "Boston", "player": "Xavier Tillman", "rat": 0.27, "salary": 2546675, "trade_value": 722656, "surplus": -1824019, "rank": 534}, {"team": "Cleveland", "player": "Emanuel Miller", "rat": 0.27, "salary": 636435, "trade_value": 722656, "surplus": 86221, "rank": 535}, {"team": "", "player": "Tyler Smith", "rat": 0.27, "salary": 0, "trade_value": 722656, "surplus": 722656, "rank": 536}, {"team": "Dallas", "player": "Miles Kelly", "rat": 0.26, "salary": 636435, "trade_value": 695891, "surplus": 59456, "rank": 537}, {"team": "", "player": "Damion Lee", "rat": 0.26, "salary": 0, "trade_value": 695891, "surplus": 695891, "rank": 538}, {"team": "New Orleans", "player": "Trey Alexander", "rat": 0.25, "salary": 636435, "trade_value": 669126, "surplus": 32691, "rank": 539}, {"team": "Philadelphia", "player": "Kyle Lowry", "rat": 0.25, "salary": 3634153, "trade_value": 669126, "surplus": -2965027, "rank": 540}, {"team": "", "player": "Kylor Kelley", "rat": 0.25, "salary": 0, "trade_value": 669126, "surplus": 669126, "rank": 541}, {"team": "", "player": "Jaylen Sims", "rat": 0.25, "salary": 0, "trade_value": 669126, "surplus": 669126, "rank": 542}, {"team": "", "player": "Markieff Morris", "rat": 0.25, "salary": 0, "trade_value": 669126, "surplus": 669126, "rank": 543}, {"team": "Detroit", "player": "Bobi Klintman", "rat": 0.24, "salary": 1955377, "trade_value": 642361, "surplus": -1313016, "rank": 544}, {"team": "LA Lakers", "player": "Adou Thiero", "rat": 0.24, "salary": 1272870, "trade_value": 642361, "surplus": -630509, "rank": 545}, {"team": "Brooklyn", "player": "Tyson Etienne", "rat": 0.23, "salary": 636435, "trade_value": 615596, "surplus": -20839, "rank": 546}, {"team": "Indiana", "player": "Taelon Peter", "rat": 0.23, "salary": 636435, "trade_value": 615596, "surplus": -20839, "rank": 547}, {"team": "New York", "player": "Pacome Dadiet", "rat": 0.23, "salary": 2847600, "trade_value": 615596, "surplus": -2232004, "rank": 548}, {"team": "Miami", "player": "Jahmir Young", "rat": 0.22, "salary": 636435, "trade_value": 588831, "surplus": -47604, "rank": 549}, {"team": "Phoenix", "player": "Nigel Hayes", "rat": 0.22, "salary": 2048494, "trade_value": 588831, "surplus": -1459663, "rank": 550}, {"team": "Portland", "player": "Yang Hansen", "rat": 0.22, "salary": 4422360, "trade_value": 588831, "surplus": -3833529, "rank": 551}, {"team": "", "player": "Emoni Bates", "rat": 0.22, "salary": 0, "trade_value": 588831, "surplus": 588831, "rank": 552}, {"team": "", "player": "Drew Peterson", "rat": 0.22, "salary": 0, "trade_value": 588831, "surplus": 588831, "rank": 553}, {"team": "", "player": "Malachi Flynn", "rat": 0.21, "salary": 0, "trade_value": 562066, "surplus": 562066, "rank": 554}, {"team": "Milwaukee", "player": "Thanasis Antetokounmpo", "rat": 0.2, "salary": 2874436, "trade_value": 535301, "surplus": -2339135, "rank": 555}, {"team": "Philadelphia", "player": "Charles Bassey", "rat": 0.2, "salary": 141463, "trade_value": 535301, "surplus": 393838, "rank": 556}, {"team": "", "player": "Patrick Baldwin", "rat": 0.19, "salary": 0, "trade_value": 508536, "surplus": 508536, "rank": 557}, {"team": "", "player": "Isaiah Wong", "rat": 0.19, "salary": 0, "trade_value": 508536, "surplus": 508536, "rank": 558}, {"team": "Boston", "player": "Ron Harper Jr", "rat": 0.18, "salary": 636435, "trade_value": 481771, "surplus": -154664, "rank": 559}, {"team": "Minnesota", "player": "Joe Ingles", "rat": 0.17, "salary": 3634153, "trade_value": 455006, "surplus": -3179147, "rank": 560}, {"team": "Sacramento", "player": "Daeqwon Plowden", "rat": 0.17, "salary": 636435, "trade_value": 455006, "surplus": -181429, "rank": 561}, {"team": "", "player": "Josh Christopher", "rat": 0.17, "salary": 0, "trade_value": 455006, "surplus": 455006, "rank": 562}, {"team": "", "player": "David Roddy", "rat": 0.17, "salary": 0, "trade_value": 455006, "surplus": 455006, "rank": 563}, {"team": "", "player": "Marcus Garrett", "rat": 0.16, "salary": 0, "trade_value": 428240, "surplus": 428240, "rank": 564}, {"team": "", "player": "Justin Minaya", "rat": 0.16, "salary": 0, "trade_value": 428240, "surplus": 428240, "rank": 565}, {"team": "Minnesota", "player": "Enrique Freeman", "rat": 0.15, "salary": 636435, "trade_value": 401475, "surplus": -234960, "rank": 566}, {"team": "", "player": "Alex Len", "rat": 0.15, "salary": 0, "trade_value": 401475, "surplus": 401475, "rank": 567}, {"team": "San Antonio", "player": "Harrison Ingram", "rat": 0.14, "salary": 636435, "trade_value": 374710, "surplus": -261725, "rank": 568}, {"team": "", "player": "Reggie Jackson", "rat": 0.14, "salary": 0, "trade_value": 374710, "surplus": 374710, "rank": 569}, {"team": "", "player": "Jeenathan Williams", "rat": 0.14, "salary": 0, "trade_value": 374710, "surplus": 374710, "rank": 570}, {"team": "Brooklyn", "player": "EJ Liddell", "rat": 0.13, "salary": 636435, "trade_value": 347945, "surplus": -288490, "rank": 571}, {"team": "Indiana", "player": "Kam Jones", "rat": 0.13, "salary": 1272870, "trade_value": 347945, "surplus": -924925, "rank": 572}, {"team": "Phoenix", "player": "Khaman Maluach", "rat": 0.13, "salary": 6016080, "trade_value": 347945, "surplus": -5668135, "rank": 573}, {"team": "", "player": "Mason Jones", "rat": 0.13, "salary": 0, "trade_value": 347945, "surplus": 347945, "rank": 574}, {"team": "Chicago", "player": "Dario Saric", "rat": 0.12, "salary": 5426400, "trade_value": 321180, "surplus": -5105220, "rank": 575}, {"team": "", "player": "Mo Bamba", "rat": 0.12, "salary": 0, "trade_value": 321180, "surplus": 321180, "rank": 576}, {"team": "", "player": "Mark Sears", "rat": 0.12, "salary": 0, "trade_value": 321180, "surplus": 321180, "rank": 577}, {"team": "Houston", "player": "Isaiah Crawford", "rat": 0.11, "salary": 636435, "trade_value": 294415, "surplus": -342020, "rank": 578}, {"team": "Utah", "player": "Elijah Harkless", "rat": 0.1, "salary": 636435, "trade_value": 267650, "surplus": -368785, "rank": 579}, {"team": "", "player": "Kobe Bufkin", "rat": 0.1, "salary": 0, "trade_value": 267650, "surplus": 267650, "rank": 580}, {"team": "", "player": "Vlatko Cancar", "rat": 0.1, "salary": 0, "trade_value": 267650, "surplus": 267650, "rank": 581}, {"team": "", "player": "Miles Norris", "rat": 0.09, "salary": 0, "trade_value": 240885, "surplus": 240885, "rank": 582}, {"team": "Chicago", "player": "Lachlan Olbrich", "rat": 0.08, "salary": 636435, "trade_value": 214120, "surplus": -422315, "rank": 583}, {"team": "Portland", "player": "Javonte Cooke", "rat": 0.08, "salary": 636435, "trade_value": 214120, "surplus": -422315, "rank": 584}, {"team": "", "player": "David Duke", "rat": 0.08, "salary": 0, "trade_value": 214120, "surplus": 214120, "rank": 585}, {"team": "", "player": "Riley Minix", "rat": 0.08, "salary": 0, "trade_value": 214120, "surplus": 214120, "rank": 586}, {"team": "", "player": "James Johnson", "rat": 0.08, "salary": 0, "trade_value": 214120, "surplus": 214120, "rank": 587}, {"team": "", "player": "Mac McClung", "rat": 0.08, "salary": 0, "trade_value": 214120, "surplus": 214120, "rank": 588}, {"team": "", "player": "PJ Tucker", "rat": 0.07, "salary": 0, "trade_value": 187355, "surplus": 187355, "rank": 589}, {"team": "", "player": "Yuri Collins", "rat": 0.07, "salary": 0, "trade_value": 187355, "surplus": 187355, "rank": 590}, {"team": "Philadelphia", "player": "Johni Broome", "rat": 0.06, "salary": 1272870, "trade_value": 160590, "surplus": -1112280, "rank": 591}, {"team": "Washington", "player": "Skal Labissiere", "rat": 0.06, "salary": 153330, "trade_value": 160590, "surplus": 7260, "rank": 592}, {"team": "", "player": "Vasilije Micic", "rat": 0.06, "salary": 0, "trade_value": 160590, "surplus": 160590, "rank": 593}, {"team": "", "player": "BJ Boston", "rat": 0.06, "salary": 0, "trade_value": 160590, "surplus": 160590, "rank": 594}, {"team": "", "player": "Isaiah Mobley", "rat": 0.06, "salary": 0, "trade_value": 160590, "surplus": 160590, "rank": 595}, {"team": "", "player": "Braxton Key", "rat": 0.06, "salary": 0, "trade_value": 160590, "surplus": 160590, "rank": 596}, {"team": "Denver", "player": "Curtis Jones", "rat": 0.05, "salary": 636435, "trade_value": 133825, "surplus": -502610, "rank": 597}, {"team": "Golden State", "player": "LJ Cryer", "rat": 0.05, "salary": 424662, "trade_value": 133825, "surplus": -290837, "rank": 598}, {"team": "Phoenix", "player": "Koby Brea", "rat": 0.05, "salary": 636435, "trade_value": 133825, "surplus": -502610, "rank": 599}, {"team": "", "player": "Jalen Bridges", "rat": 0.05, "salary": 0, "trade_value": 133825, "surplus": 133825, "rank": 600}, {"team": "", "player": "Anton Watson", "rat": 0.05, "salary": 0, "trade_value": 133825, "surplus": 133825, "rank": 601}, {"team": "", "player": "James Wiseman", "rat": 0.05, "salary": 0, "trade_value": 133825, "surplus": 133825, "rank": 602}, {"team": "Golden State", "player": "Malevy Leons", "rat": 0.04, "salary": 405359, "trade_value": 107060, "surplus": -298299, "rank": 603}, {"team": "Sacramento", "player": "Isaiah Stevens", "rat": 0.04, "salary": 636435, "trade_value": 107060, "surplus": -529375, "rank": 604}, {"team": "San Antonio", "player": "Stanley Umude", "rat": 0.04, "salary": 363537, "trade_value": 107060, "surplus": -256477, "rank": 605}, {"team": "", "player": "Hunter Sallis", "rat": 0.03, "salary": 0, "trade_value": 80295, "surplus": 80295, "rank": 606}, {"team": "", "player": "Jae Crowder", "rat": 0.03, "salary": 0, "trade_value": 80295, "surplus": 80295, "rank": 607}, {"team": "", "player": "Trentyn Flowers", "rat": 0.03, "salary": 0, "trade_value": 80295, "surplus": 80295, "rank": 608}, {"team": "LA Lakers", "player": "Chris Manon", "rat": 0.02, "salary": 636435, "trade_value": 53530, "surplus": -582905, "rank": 609}, {"team": "Memphis", "player": "Jahmai Mashack", "rat": 0.02, "salary": 476136, "trade_value": 53530, "surplus": -422606, "rank": 610}, {"team": "", "player": "Armel Traore", "rat": 0.02, "salary": 0, "trade_value": 53530, "surplus": 53530, "rank": 611}, {"team": "", "player": "Terry Taylor", "rat": 0.02, "salary": 0, "trade_value": 53530, "surplus": 53530, "rank": 612}, {"team": "", "player": "Terence Davis", "rat": 0.02, "salary": 0, "trade_value": 53530, "surplus": 53530, "rank": 613}, {"team": "", "player": "Jalen McDaniels", "rat": 0.01, "salary": 0, "trade_value": 26765, "surplus": 26765, "rank": 614}, {"team": "", "player": "Jack McVeigh", "rat": 0.01, "salary": 0, "trade_value": 26765, "surplus": 26765, "rank": 615}, {"team": "", "player": "Matt Ryan", "rat": 0.01, "salary": 0, "trade_value": 26765, "surplus": 26765, "rank": 616}, {"team": "Atlanta", "player": "Nikola Djurisic", "rat": 0.0, "salary": 1272870, "trade_value": 0, "surplus": -1272870, "rank": 617}, {"team": "Boston", "player": "Max Shulga", "rat": 0.0, "salary": 636435, "trade_value": 0, "surplus": -636435, "rank": 618}, {"team": "Brooklyn", "player": "Chaney Johnson", "rat": 0.0, "salary": 347451, "trade_value": 0, "surplus": -347451, "rank": 619}, {"team": "Cleveland", "player": "Tristan Enaruna", "rat": 0.0, "salary": 241285, "trade_value": 0, "surplus": -241285, "rank": 620}, {"team": "Denver", "player": "Tamar Bates", "rat": 0.0, "salary": 636435, "trade_value": 0, "surplus": -636435, "rank": 621}, {"team": "Miami", "player": "Vladislav Goldin", "rat": 0.0, "salary": 636435, "trade_value": 0, "surplus": -636435, "rank": 622}, {"team": "Milwaukee", "player": "Alex Antetokounmpo", "rat": 0.0, "salary": 636435, "trade_value": 0, "surplus": -636435, "rank": 623}, {"team": "Minnesota", "player": "Rocco Zikarsky", "rat": 0.0, "salary": 636435, "trade_value": 0, "surplus": -636435, "rank": 624}, {"team": "New Orleans", "player": "Dejounte Murray", "rat": 0.0, "salary": 30801103, "trade_value": 0, "surplus": -30801103, "rank": 625}, {"team": "Oklahoma City", "player": "Nikola Topic", "rat": 0.0, "salary": 5182920, "trade_value": 0, "surplus": -5182920, "rank": 626}, {"team": "Oklahoma City", "player": "Thomas Sorber", "rat": 0.0, "salary": 4655040, "trade_value": 0, "surplus": -4655040, "rank": 627}, {"team": "Utah", "player": "John Tonje", "rat": 0.0, "salary": 636435, "trade_value": 0, "surplus": -636435, "rank": 628}, {"team": "Washington", "player": "Sharife Cooper", "rat": 0.0, "salary": 636435, "trade_value": 0, "surplus": -636435, "rank": 629}, {"team": "", "player": "Johnny Davis", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 630}, {"team": "", "player": "Daniel Theis", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 631}, {"team": "", "player": "Malik Williams", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 632}, {"team": "", "player": "Gabe McGlothan", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 633}, {"team": "", "player": "Alex Toohey", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 634}, {"team": "", "player": "Kevon Harris", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 635}, {"team": "", "player": "Jaylen Nowell", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 636}, {"team": "", "player": "PJ Dozier", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 637}, {"team": "", "player": "Bruno Fernando", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 638}, {"team": "", "player": "Quincy Olivari", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 639}, {"team": "", "player": "Jazian Gortman", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 640}, {"team": "", "player": "Chris Duarte", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 641}, {"team": "", "player": "Cam Reddish", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 642}, {"team": "", "player": "Ulrich Chomche", "rat": 0.0, "salary": 0, "trade_value": 0, "surplus": 0, "rank": 643}, {"team": "Houston", "player": "Tristen Newton", "rat": -0.01, "salary": 321714, "trade_value": -26765, "surplus": -348479, "rank": 644}, {"team": "New Orleans", "player": "Hunter Dickinson", "rat": -0.01, "salary": 636435, "trade_value": -26765, "surplus": -663200, "rank": 645}, {"team": "", "player": "Zyon Pullin", "rat": -0.01, "salary": 0, "trade_value": -26765, "surplus": -26765, "rank": 646}, {"team": "", "player": "Phillip Wheeler", "rat": -0.01, "salary": 0, "trade_value": -26765, "surplus": -26765, "rank": 647}, {"team": "Chicago", "player": "Noa Essengue", "rat": -0.02, "salary": 5429520, "trade_value": -53530, "surplus": -5483050, "rank": 648}, {"team": "Toronto", "player": "Chucky Hepburn", "rat": -0.04, "salary": 636435, "trade_value": -107060, "surplus": -743495, "rank": 649}]};
+
+// ===== APP =====
+const data = TRADE_DATA;
+const maxAbsSurplus = Math.max(...data.players.map(p => Math.abs(p.surplus)));
+
+function formatMoney(n) {
+  const abs = Math.abs(n);
+  if (abs >= 1e6) return (n < 0 ? '-' : '') + '$' + (abs / 1e6).toFixed(1) + 'M';
+  if (abs >= 1e3) return (n < 0 ? '-' : '') + '$' + (abs / 1e3).toFixed(0) + 'K';
+  return '$' + n.toLocaleString();
+}
+
+function formatFullMoney(n) {
+  return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString();
+}
+
+function ratClass(r) {
+  if (r >= 18) return 'rat-elite';
+  if (r >= 12) return 'rat-star';
+  if (r >= 6) return 'rat-solid';
+  if (r >= 2) return 'rat-avg';
+  return 'rat-low';
+}
+
+function rankClass(rank) {
+  if (rank <= 5) return 'rank-top5';
+  if (rank <= 20) return 'rank-top20';
+  if (rank <= 50) return 'rank-top50';
+  return '';
+}
+
+function surplusClass(s) {
+  if (s > 500000) return 'surplus-pos';
+  if (s < -500000) return 'surplus-neg';
+  return 'surplus-neutral';
+}
+
+// Build stat cards
+function buildStats() {
+  const bar = document.getElementById('statsBar');
+  const stats = [
+    { label: 'Players Ranked', value: data.total_players.toString(), unit: '' },
+    { label: 'Avg RAT 365', value: data.avg_rat.toFixed(2), unit: '' },
+    { label: 'Avg Salary (≥$1.2M)', value: '$' + (data.avg_salary / 1e6).toFixed(1), unit: 'M' },
+    { label: 'Salary Pool', value: data.salary_pool_players.toString(), unit: ' players' }
+  ];
+  bar.innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="label">${s.label}</div>
+      <div class="value">${s.value}<span class="unit">${s.unit}</span></div>
+    </div>
+  `).join('');
+}
+
+// Build team filter
+function buildTeamFilter() {
+  const sel = document.getElementById('teamFilter');
+  const teams = [...new Set(data.players.map(p => p.team))].sort();
+  teams.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    sel.appendChild(opt);
+  });
+}
+
+// Render table
+function renderTable(players) {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = players.map((p, i) => {
+    const surplusPct = Math.min(Math.abs(p.surplus) / maxAbsSurplus * 50, 50);
+    const barClass = p.surplus >= 0 ? 'positive' : 'negative';
+    return `<tr style="animation-delay:${Math.min(i * 0.02, 0.5)}s">
+      <td class="col-rank ${rankClass(p.rank)}">${p.rank}</td>
+      <td class="col-player">
+        <div class="player-name">${p.player}</div>
+        <div class="player-team">${p.team}</div>
+      </td>
+      <td class="col-num col-rat ${ratClass(p.rat)}">${p.rat.toFixed(2)}</td>
+      <td class="col-num">${formatFullMoney(p.salary)}</td>
+      <td class="col-num col-trade-value">${formatFullMoney(p.trade_value)}</td>
+      <td class="col-num col-surplus">
+        <div class="surplus-cell">
+          <div class="surplus-bar-track">
+            <div class="surplus-bar-center"></div>
+            <div class="surplus-bar ${barClass}" style="width:${surplusPct}%"></div>
+          </div>
+          <span class="${surplusClass(p.surplus)}">${p.surplus >= 0 ? '+' : ''}${formatMoney(p.surplus)}</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Filter & sort
+function update() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const team = document.getElementById('teamFilter').value;
+  const [sortKey, sortDir] = document.getElementById('sortSelect').value.split('-');
+
+  let filtered = data.players.filter(p => {
+    if (team && p.team !== team) return false;
+    if (search && !p.player.toLowerCase().includes(search) && !p.team.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  const keyMap = { trade_value: 'trade_value', surplus: 'surplus', rat: 'rat', salary: 'salary' };
+  const key = keyMap[sortKey];
+  const dir = sortDir === 'desc' ? -1 : 1;
+  filtered.sort((a, b) => (a[key] - b[key]) * dir);
+
+  renderTable(filtered);
+}
+
+// Methodology placeholders
+document.getElementById('mTotalPlayers').textContent = data.total_players;
+document.getElementById('mAvgRat').textContent = data.avg_rat.toFixed(2);
+document.getElementById('mSalaryPool').textContent = data.salary_pool_players;
+document.getElementById('mAvgSalary').textContent = '$' + (data.avg_salary / 1e6).toFixed(2) + 'M';
+
+// Init
+buildStats();
+buildTeamFilter();
+update();
+
+document.getElementById('searchInput').addEventListener('input', update);
+document.getElementById('teamFilter').addEventListener('change', update);
+document.getElementById('sortSelect').addEventListener('change', update);
+</script>
+</body>
+</html>
