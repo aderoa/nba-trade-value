@@ -119,9 +119,9 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Trade Value Rankings</h1>
-      <span class="tag">v1.2</span>
+      <span class="tag">v1.3</span>
     </div>
-    <p class="header-subtitle">Progressive trade values with Watermark rating — fixed league salary pool, elite production rewarded exponentially</p>
+    <p class="header-subtitle">Progressive trade values blending Watermark (75%) and RAT 365 (25%) — fixed league salary pool</p>
   </div>
 </div>
 
@@ -187,22 +187,25 @@
     <h3>Methodology</h3>
     <p>Trade values are distributed from a <strong style="color:var(--text-primary)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
     <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating blends three components to smooth out single-season volatility and injury impact: <code>A)</code> Average RAT per game across all available seasons (up to 5 years), <code>B)</code> Average RAT per game over the last 3 seasons, and <code>C)</code> Average RAT per game in the current 2025-26 season. Components are only included if the player has data for that period. Hover over any Watermark value to see the breakdown.</p>
-    <p>Each player's Watermark is then raised to the power of <code>1.322</code>, creating a progressive curve where elite production is rewarded exponentially. A player with 2× the average Watermark receives ~2.5× the average share of the salary pool.</p>
+    <p>The final Trade Value is a <strong style="color:var(--text-primary)">75/25 blend</strong>: 75% from the Watermark-based distribution and 25% from the RAT 365-based distribution. This ensures historical track record carries the most weight while still rewarding (or penalizing) current-season performance. Both distributions use an exponent of <code>1.322</code>, creating a progressive curve where elite production is rewarded exponentially.</p>
     <div class="formula-block">
       <span class="step-label">Step 1</span>&nbsp; Watermark = avg( A: all-seasons RAT/g, B: last-3yr RAT/g, C: 2025-26 RAT/g )<br>
-      <span class="step-label">Step 2</span>&nbsp; Adjusted Score = max(Watermark, 0) ^ 1.322<br>
-      <span class="step-label">Step 3</span>&nbsp; Trade Value = (Adjusted Score ÷ Sum of All Scores) × Total Salary Pool
+      <span class="step-label">Step 2</span>&nbsp; TV<sub>WM</sub> = (max(Watermark,0)^1.322 ÷ Σ all WM scores) × Salary Pool<br>
+      <span class="step-label">Step 3</span>&nbsp; TV<sub>RAT</sub> = (max(RAT 365,0)^1.322 ÷ Σ all RAT scores) × Salary Pool<br>
+      <span class="step-label">Step 4</span>&nbsp; Trade Value = 75% × TV<sub>WM</sub> + 25% × TV<sub>RAT</sub>
     </div>
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Trade Value Rankings v1.2 — Data fetched live from Google Sheets</div>
+<div class="footer">Hoopsmatic — NBA Trade Value Rankings v1.3 — Data fetched live from Google Sheets</div>
 
 <script>
 const SHEET_ID = '2PACX-1vSg6im6IYB6HXMGzQbmmBnLw9SfQLzxCSo8OfChxlJLhsB6BBCO0wPF_TMch0YgAbtFqYkwDWrsxRe7';
 const GID = '1310971167';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=${GID}&single=true&output=csv`;
 const EXPONENT = 1.322;
+const WM_WEIGHT = 0.75;
+const RAT_WEIGHT = 0.25;
 const RECENT_YEARS = new Set(['2023-24','2024-25','2025-26']);
 const CURRENT_YEAR = '2025-26';
 
@@ -268,9 +271,14 @@ function processData(rows) {
     p.watermark = comps.length > 0 ? comps.reduce((a,b) => a+b, 0) / comps.length : 0;
   }
 
-  const totalAdj = roster.reduce((s,p) => s + Math.pow(Math.max(p.watermark,0), EXPONENT), 0);
+  const totalAdjWM = roster.reduce((s,p) => s + Math.pow(Math.max(p.watermark,0), EXPONENT), 0);
+  const totalAdjRAT = roster.reduce((s,p) => s + Math.pow(Math.max(p.rat365,0), EXPONENT), 0);
   for (const p of roster) {
-    p.tradeValue = Math.round((Math.pow(Math.max(p.watermark,0), EXPONENT) / totalAdj) * totalSalaryPool);
+    const tvWM = (Math.pow(Math.max(p.watermark,0), EXPONENT) / totalAdjWM) * totalSalaryPool;
+    const tvRAT = (Math.pow(Math.max(p.rat365,0), EXPONENT) / totalAdjRAT) * totalSalaryPool;
+    p.tvWM = tvWM;
+    p.tvRAT = tvRAT;
+    p.tradeValue = Math.round(WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT);
     p.surplus = p.tradeValue - p.salary;
   }
   roster.sort((a,b) => b.tradeValue - a.tradeValue);
@@ -293,7 +301,7 @@ function buildStats(d) {
     {l:'Salary Pool',v:'$'+(d.totalSalaryPool/1e9).toFixed(2),u:'B'},
     {l:'Players Ranked',v:d.players.length,u:''},
     {l:'Avg Watermark',v:avgWM.toFixed(2),u:''},
-    {l:'Exponent',v:d.exponent,u:' (progressive)'}
+    {l:'Blend',v:'75/25',u:' WM / RAT 365'}
   ].map(s=>`<div class="stat-card"><div class="label">${s.l}</div><div class="value">${s.v}<span class="unit">${s.u}</span></div></div>`).join('');
 }
 
