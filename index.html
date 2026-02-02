@@ -119,7 +119,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Trade Value Rankings</h1>
-      <span class="tag">v1.4</span>
+      <span class="tag">v1.5</span>
     </div>
     <p class="header-subtitle">Watermark (75%) + RAT 365 (25%) + Age Factor (±20%) — fixed league salary pool, progressive exponent</p>
   </div>
@@ -189,11 +189,11 @@
   <div class="method-card">
     <h3>Methodology</h3>
     <p>Trade values are distributed from a <strong style="color:var(--text-primary)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
-    <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating blends three components to smooth out single-season volatility and injury impact: <code>A)</code> Average RAT per game across all available seasons (up to 5 years), <code>B)</code> Average RAT per game over the last 3 seasons, and <code>C)</code> Average RAT per game in the current 2025-26 season. Components are only included if the player has data for that period. Hover over any Watermark value to see the breakdown.</p>
+    <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating uses three windows: <code>A)</code> Average RAT per game across all 5 seasons, <code>B)</code> Average RAT per game over the last 3 seasons, and <code>C)</code> Average RAT per game in 2025-26. A component is only included if it adds new data — if a player's 5-year and 3-year windows cover the same seasons (e.g. a 3rd-year player), the 5-year component is skipped to avoid double-counting. A rookie uses only C. Hover over any Watermark to see the breakdown.</p>
     <p>The final Trade Value is a <strong style="color:var(--text-primary)">75/25 blend</strong>: 75% from the Watermark-based distribution and 25% from the RAT 365-based distribution. Both distributions use an exponent of <code>1.4</code>, creating a progressive curve where elite production is rewarded exponentially.</p>
     <p>An <strong style="color:var(--text-primary)">age factor</strong> of <code>±20%</code> is then applied. The league average age serves as the neutral point — younger players receive up to a 20% bonus, older players up to a 20% penalty, scaling linearly. After the age adjustment, all values are renormalized so the total still equals the salary pool. Hover over any age to see the exact multiplier.</p>
     <div class="formula-block">
-      <span class="step-label">Step 1</span>&nbsp; Watermark = avg( A: all-seasons RAT/g, B: last-3yr RAT/g, C: 2025-26 RAT/g )<br>
+      <span class="step-label">Step 1</span>&nbsp; Watermark = avg( A: 5yr RAT/g, B: 3yr RAT/g, C: 2025-26 RAT/g ) — skip redundant windows<br>
       <span class="step-label">Step 2</span>&nbsp; TV<sub>WM</sub> = (max(Watermark,0)^1.4 ÷ Σ all WM scores) × Pool<br>
       <span class="step-label">Step 3</span>&nbsp; TV<sub>RAT</sub> = (max(RAT365,0)^1.4 ÷ Σ all RAT scores) × Pool<br>
       <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 75% × TV<sub>WM</sub> + 25% × TV<sub>RAT</sub><br>
@@ -203,7 +203,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Trade Value Rankings v1.4 — Data fetched live from Google Sheets</div>
+<div class="footer">Hoopsmatic — NBA Trade Value Rankings v1.5 — Data fetched live from Google Sheets</div>
 
 <script>
 const SHEET_ID = '2PACX-1vSg6im6IYB6HXMGzQbmmBnLw9SfQLzxCSo8OfChxlJLhsB6BBCO0wPF_TMch0YgAbtFqYkwDWrsxRe7';
@@ -214,7 +214,6 @@ const WM_WEIGHT = 0.75;
 const RAT_WEIGHT = 0.25;
 const AGE_MAX_BONUS = 0.20;
 const RECENT_YEARS = new Set(['2023-24','2024-25','2025-26']);
-const CURRENT_YEAR = '2025-26';
 
 function parseCSV(text) {
   const rows = []; let current = '', inQuotes = false, row = [];
@@ -262,26 +261,37 @@ function processData(rows) {
 
   const totalSalaryPool = roster.reduce((s,p) => s + p.salary, 0);
 
+  const OLDER_ONLY = new Set(['2021-22','2022-23']);
+  const MID_ONLY = new Set(['2023-24','2024-25']);
+  const CUR_YEAR = '2025-26';
+
   for (const p of roster) {
     const hist = playerHist[p.player] || [];
     const allRat = hist.reduce((s,h) => s+h.totalRat, 0), allG = hist.reduce((s,h) => s+h.games, 0);
     const recent = hist.filter(h => RECENT_YEARS.has(h.year));
     const recRat = recent.reduce((s,h) => s+h.totalRat, 0), recG = recent.reduce((s,h) => s+h.games, 0);
-    const cur = hist.filter(h => h.year === CURRENT_YEAR);
+    const cur = hist.filter(h => h.year === CUR_YEAR);
     const curRat = cur.reduce((s,h) => s+h.totalRat, 0), curG = cur.reduce((s,h) => s+h.games, 0);
 
     p.avg5yr = allG > 0 ? allRat/allG : 0;
     p.avg3yr = recG > 0 ? recRat/recG : 0;
     p.avgCurrent = curG > 0 ? curRat/curG : 0;
 
-    const comps = [];
-    if (allG > 0) comps.push(p.avg5yr);
-    if (recG > 0) comps.push(p.avg3yr);
-    if (curG > 0) comps.push(p.avgCurrent);
-    p.watermark = comps.length > 0 ? comps.reduce((a,b) => a+b, 0) / comps.length : 0;
-  }
+    // Only include a component if it adds NEW data vs the narrower window
+    const playerYears = new Set(hist.map(h => h.year));
+    const hasOlder = [...playerYears].some(y => OLDER_ONLY.has(y));
+    const hasMid = [...playerYears].some(y => MID_ONLY.has(y));
+    const hasCurrent = playerYears.has(CUR_YEAR);
 
-  // Parse today's date and calculate ages
+    const comps = [];
+    const labels = [];
+    if (hasOlder && allG > 0) { comps.push(p.avg5yr); labels.push('A'); }
+    if (hasMid && recG > 0) { comps.push(p.avg3yr); labels.push('B'); }
+    if (hasCurrent && curG > 0) { comps.push(p.avgCurrent); labels.push('C'); }
+
+    p.watermark = comps.length > 0 ? comps.reduce((a,b) => a+b, 0) / comps.length : 0;
+    p.wmLabels = labels.join('+') || '—';
+  }
   function parseDate(s) {
     if (!s) return null;
     const parts = s.split('/');
@@ -366,7 +376,7 @@ function renderTable(players) {
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
       <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span></div></td>
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}</td>
-      <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}<div class="wm-tooltip"><span class="tt-label">5-yr avg/g:</span> <span class="tt-val">${p.avg5yr.toFixed(2)}</span><br><span class="tt-label">3-yr avg/g:</span> <span class="tt-val">${p.avg3yr.toFixed(2)}</span><br><span class="tt-label">2025-26/g:</span> <span class="tt-val">${p.avgCurrent.toFixed(2)}</span></div></td>
+      <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}<div class="wm-tooltip"><span class="tt-label">A) 5-yr avg/g:</span> <span class="tt-val">${p.avg5yr.toFixed(2)}</span><br><span class="tt-label">B) 3-yr avg/g:</span> <span class="tt-val">${p.avg3yr.toFixed(2)}</span><br><span class="tt-label">C) 2025-26/g:</span> <span class="tt-val">${p.avgCurrent.toFixed(2)}</span><br><span class="tt-label">Using:</span> <span class="tt-val">${p.wmLabels}</span></div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
       <td class="col-num col-trade-value">${fmtFull$(p.tradeValue)}</td>
       <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span></div></td>
