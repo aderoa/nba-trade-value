@@ -189,16 +189,16 @@
   <div class="method-card">
     <h3>Methodology</h3>
     <p>Trade values are distributed from a <strong style="color:var(--text-primary)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
-    <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating uses three windows: <code>A)</code> Average RAT per game across all 5 seasons, <code>B)</code> Average RAT per game over the last 3 seasons, and <code>C)</code> Average RAT per game in 2025-26. A component is only included if it adds new data — if a player's 5-year and 3-year windows cover the same seasons (e.g. a 3rd-year player), the 5-year component is skipped to avoid double-counting. A rookie uses only C. Hover over any Watermark to see the breakdown.</p>
+    <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating uses a time-decay weighted average: each game's per-game RAT contributes weighted by its season's recency — 2025-26 at full weight (1.0), 2024-25 at 0.8, 2023-24 at 0.6, 2022-23 at 0.4, and 2021-22 at 0.2. Recent performance matters most while still crediting a strong track record. Hover over any Watermark to see the per-season breakdown.</p>
     <p>The final Trade Value is a <strong style="color:var(--text-primary)">75/25 blend</strong>: 75% from the Watermark-based distribution and 25% from the RAT 365-based distribution. Both distributions use an exponent of <code>1.4</code>, creating a progressive curve where elite production is rewarded exponentially.</p>
-    <p>A <strong style="color:var(--text-primary)">games-played correction</strong> is applied to both Watermark and RAT 365 to compensate for the Global Rating's built-in availability penalty. Players who miss games are already penalized in their per-game rate by RAT; this correction partially undoes that double-counting. For each window, the per-game average is adjusted by <code>(expected games / actual games)^0.8</code>, capped at 1.4× and only applied when a player has appeared in at least 40% of expected games. Hover over any age to see the correction factor.</p>
+    <p>A <strong style="color:var(--text-primary)">games-played correction</strong> is applied per-season to compensate for the Global Rating's built-in availability penalty. For each season, the per-game average is adjusted by <code>(expected / actual)^0.8</code>, capped at 1.4× and only for players with ≥40% of expected games. The same correction is applied to RAT 365.</p>
     <p>An <strong style="color:var(--text-primary)">age factor</strong> of <code>±33%</code> is then applied. The league average age serves as the neutral point — younger players receive up to a 33% bonus, older players up to a 33% penalty, scaling linearly. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
     <div class="formula-block">
-      <span class="step-label">Step 1</span>&nbsp; Watermark = avg( A: 5yr RAT/g, B: 3yr RAT/g, C: 2025-26 RAT/g ) — skip redundant windows<br>
-      <span class="step-label">Step 2</span>&nbsp; Games correction: adj = raw × min(1.4, (expected/actual)^0.8) per window<br>
-      <span class="step-label">Step 3</span>&nbsp; TV<sub>WM</sub> = (adj Watermark^1.4 ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (adj RAT365^1.4 ÷ Σ) × Pool<br>
+      <span class="step-label">Step 1</span>&nbsp; Watermark = Σ(weight × games × corrected RAT/g) ÷ Σ(weight × games) — time-decay per season<br>
+      <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × min(1.4, (expected/actual)^0.8)<br>
+      <span class="step-label">Step 3</span>&nbsp; TV<sub>WM</sub> = (Watermark^1.4 ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (adj RAT365^1.4 ÷ Σ) × Pool<br>
       <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 75% × TV<sub>WM</sub> + 25% × TV<sub>RAT</sub><br>
-      <span class="step-label">Step 5</span>&nbsp; Age × Games → normalize to Pool = Trade Value
+      <span class="step-label">Step 5</span>&nbsp; Age factor (±33%) → normalize to Pool = Trade Value
     </div>
   </div>
 </div>
@@ -216,7 +216,6 @@ const AGE_MAX_BONUS = 0.33;
 const GAMES_BETA = 0.8;
 const GAMES_MAX_MULT = 1.4;
 const GAMES_MIN_PCT = 0.40;
-const RECENT_YEARS = new Set(['2023-24','2024-25','2025-26']);
 
 function parseCSV(text) {
   const rows = []; let current = '', inQuotes = false, row = [];
@@ -264,64 +263,53 @@ function processData(rows) {
 
   const totalSalaryPool = roster.reduce((s,p) => s + p.salary, 0);
 
-  const OLDER_ONLY = new Set(['2021-22','2022-23']);
-  const MID_ONLY = new Set(['2023-24','2024-25']);
+  const SEASON_WEIGHT = {'2025-26':1.0,'2024-25':0.8,'2023-24':0.6,'2022-23':0.4,'2021-22':0.2};
   const CUR_YEAR = '2025-26';
   const EXPECTED = {'2021-22':82,'2022-23':82,'2023-24':82,'2024-25':82,'2025-26':48};
 
-  function gamesCorr(raw, actual, expected) {
-    const pct = actual / expected;
-    if (pct < GAMES_MIN_PCT) return raw;
-    const mult = Math.min(GAMES_MAX_MULT, Math.pow(expected / actual, GAMES_BETA));
-    return raw * mult;
-  }
-  function expForYears(yrs) { return [...yrs].reduce((s,y) => s + (EXPECTED[y]||82), 0); }
-
   for (const p of roster) {
     const hist = playerHist[p.player] || [];
-    const allRat = hist.reduce((s,h) => s+h.totalRat, 0), allG = hist.reduce((s,h) => s+h.games, 0);
-    const recent = hist.filter(h => RECENT_YEARS.has(h.year));
-    const recRat = recent.reduce((s,h) => s+h.totalRat, 0), recG = recent.reduce((s,h) => s+h.games, 0);
-    const cur = hist.filter(h => h.year === CUR_YEAR);
-    const curRat = cur.reduce((s,h) => s+h.totalRat, 0), curG = cur.reduce((s,h) => s+h.games, 0);
-
-    p.avg5yr = allG > 0 ? allRat/allG : 0;
-    p.avg3yr = recG > 0 ? recRat/recG : 0;
-    p.avgCurrent = curG > 0 ? curRat/curG : 0;
-    p.curGames = curG;
-    p.expGames = EXPECTED[CUR_YEAR];
-
-    const playerYears = new Set(hist.map(h => h.year));
-    const hasOlder = [...playerYears].some(y => OLDER_ONLY.has(y));
-    const hasMid = [...playerYears].some(y => MID_ONLY.has(y));
-    const hasCurrent = playerYears.has(CUR_YEAR);
-
-    const comps = [];
-    const labels = [];
-    if (hasOlder && allG > 0) { comps.push(gamesCorr(allRat/allG, allG, expForYears(playerYears))); labels.push('A'); }
-    if (hasMid && recG > 0) {
-      const recYrs = new Set([...playerYears].filter(y => RECENT_YEARS.has(y)));
-      comps.push(gamesCorr(recRat/recG, recG, expForYears(recYrs))); labels.push('B');
+    let num = 0, den = 0;
+    for (const h of hist) {
+      const w = SEASON_WEIGHT[h.year] || 0;
+      if (w <= 0 || h.games <= 0) continue;
+      let perGame = h.totalRat / h.games;
+      // Per-season games correction
+      const exp = EXPECTED[h.year] || 82;
+      const pct = h.games / exp;
+      if (pct >= GAMES_MIN_PCT) perGame *= Math.min(GAMES_MAX_MULT, Math.pow(exp / h.games, GAMES_BETA));
+      num += perGame * w * h.games;
+      den += w * h.games;
     }
-    if (hasCurrent && curG > 0) { comps.push(gamesCorr(curRat/curG, curG, EXPECTED[CUR_YEAR])); labels.push('C'); }
+    p.watermark = den > 0 ? num / den : 0;
 
-    p.watermark = comps.length > 0 ? comps.reduce((a,b) => a+b, 0) / comps.length : 0;
-    p.wmLabels = labels.join('+') || '—';
+    const cur = hist.filter(h => h.year === CUR_YEAR);
+    p.curGames = cur.reduce((s,h) => s+h.games, 0);
+    p.expGames = EXPECTED[CUR_YEAR];
+    if (p.curGames > 0 && (p.curGames/p.expGames) >= GAMES_MIN_PCT) {
+      p.gamesCorr = Math.min(GAMES_MAX_MULT, Math.pow(p.expGames/p.curGames, GAMES_BETA));
+    } else { p.gamesCorr = 1.0; }
+
+    // Season weights for tooltip
+    const yrs = [...new Set(hist.map(h => h.year))].sort();
+    p.seasonInfo = yrs.map(yr => {
+      const yh = hist.filter(h => h.year === yr);
+      const g = yh.reduce((s,h) => s+h.games, 0);
+      const r = yh.reduce((s,h) => s+h.totalRat, 0);
+      const w = SEASON_WEIGHT[yr] || 0;
+      return { year: yr, avg: g > 0 ? r/g : 0, games: g, weight: w };
+    }).filter(s => s.weight > 0);
 
     // Games-corrected RAT 365
-    if (curG > 0) {
-      const pct = curG / EXPECTED[CUR_YEAR];
-      p.rat365adj = pct >= GAMES_MIN_PCT ? p.rat365 * Math.min(GAMES_MAX_MULT, Math.pow(EXPECTED[CUR_YEAR]/curG, GAMES_BETA)) : p.rat365;
+    if (p.curGames > 0) {
+      const pct = p.curGames / EXPECTED[CUR_YEAR];
+      p.rat365adj = pct >= GAMES_MIN_PCT ? p.rat365 * Math.min(GAMES_MAX_MULT, Math.pow(EXPECTED[CUR_YEAR]/p.curGames, GAMES_BETA)) : p.rat365;
     } else {
       const prev = hist.filter(h => h.year === '2024-25');
       const pg = prev.reduce((s,h) => s+h.games, 0) || 82;
       const pct = pg / 82;
       p.rat365adj = pct >= GAMES_MIN_PCT ? p.rat365 * Math.min(GAMES_MAX_MULT, Math.pow(82/pg, GAMES_BETA)) : p.rat365;
     }
-    // Games correction display value
-    if (curG > 0 && (curG / EXPECTED[CUR_YEAR]) >= GAMES_MIN_PCT) {
-      p.gamesCorr = Math.min(GAMES_MAX_MULT, Math.pow(EXPECTED[CUR_YEAR]/curG, GAMES_BETA));
-    } else { p.gamesCorr = 1.0; }
   }
   function parseDate(s) {
     if (!s) return null;
@@ -407,7 +395,7 @@ function renderTable(players) {
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
       <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span></div></td>
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}</td>
-      <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}<div class="wm-tooltip"><span class="tt-label">A) 5-yr avg/g:</span> <span class="tt-val">${p.avg5yr.toFixed(2)}</span><br><span class="tt-label">B) 3-yr avg/g:</span> <span class="tt-val">${p.avg3yr.toFixed(2)}</span><br><span class="tt-label">C) 2025-26/g:</span> <span class="tt-val">${p.avgCurrent.toFixed(2)}</span><br><span class="tt-label">Using:</span> <span class="tt-val">${p.wmLabels}</span></div></td>
+      <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
       <td class="col-num col-trade-value">${fmtFull$(p.tradeValue)}</td>
       <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span></div></td>
