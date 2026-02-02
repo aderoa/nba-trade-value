@@ -119,9 +119,9 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Trade Value Rankings</h1>
-      <span class="tag">v1.5</span>
+      <span class="tag">v1.7</span>
     </div>
-    <p class="header-subtitle">Watermark (75%) + RAT 365 (25%) + Age Factor (±20%) — fixed league salary pool, progressive exponent</p>
+    <p class="header-subtitle">Hoopsmatic — Updated live</p>
   </div>
 </div>
 
@@ -148,14 +148,8 @@
       <option value="uncappedTV-asc">Trade Value ↑</option>
       <option value="surplus-desc">Surplus ↓</option>
       <option value="surplus-asc">Surplus ↑</option>
-      <option value="watermark-desc">Watermark ↓</option>
-      <option value="watermark-asc">Watermark ↑</option>
-      <option value="rat365-desc">RAT 365 ↓</option>
-      <option value="rat365-asc">RAT 365 ↑</option>
       <option value="salary-desc">Salary ↓</option>
       <option value="salary-asc">Salary ↑</option>
-      <option value="age-asc">Age ↑ (youngest)</option>
-      <option value="age-desc">Age ↓ (oldest)</option>
     </select>
   </div>
 </div>
@@ -173,9 +167,6 @@
       <tr>
         <th class="col-rank">#</th>
         <th>Player</th>
-        <th style="text-align:right">Age</th>
-        <th style="text-align:right">RAT 365</th>
-        <th style="text-align:right">Watermark</th>
         <th style="text-align:right">Salary</th>
         <th style="text-align:right">Trade Value</th>
         <th style="text-align:center">Category</th>
@@ -186,25 +177,7 @@
   </table>
 </div>
 
-<div class="methodology">
-  <div class="method-card">
-    <h3>Methodology</h3>
-    <p>Trade values are distributed from a <strong style="color:var(--text-primary)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
-    <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating uses a time-decay weighted average: each game's per-game RAT contributes weighted by its season's recency — 2025-26 at full weight (1.0), then decaying by 0.6× per year back (0.6, 0.36, 0.216, 0.13). Recent performance matters most while still crediting a strong track record. Hover over any Watermark to see the per-season breakdown.</p>
-    <p>The final Trade Value is an <strong style="color:var(--text-primary)">85/15 blend</strong>: 85% from the Watermark-based distribution and 15% from the RAT 365-based distribution. Both distributions use an exponent of <code>1.8</code>, creating a steep progressive curve where elite production is rewarded exponentially.</p>
-    <p>A <strong style="color:var(--text-primary)">games-played correction</strong> is applied per-season to compensate for the Global Rating's built-in availability penalty. For each season, the per-game average is adjusted by <code>(expected / actual)^0.8</code>, capped at 1.4× and only for players with ≥40% of expected games. The same correction is applied to RAT 365.</p>
-    <p>An <strong style="color:var(--text-primary)">age factor</strong> rewards youth and mildly penalizes age. Players below the league average age (~26.5) receive up to a 2× bonus scaling linearly to the youngest player. Players 35 and older receive a 3% penalty per year over 35 (floor 0.5×). Players between average and 35 are unaffected. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
-    <div class="formula-block">
-      <span class="step-label">Step 1</span>&nbsp; Watermark = Σ(weight × games × corrected RAT/g) ÷ Σ(weight × games) — time-decay per season<br>
-      <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × min(1.4, (expected/actual)^0.8)<br>
-      <span class="step-label">Step 3</span>&nbsp; TV<sub>WM</sub> = (Watermark^1.8 ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (adj RAT365^1.8 ÷ Σ) × Pool<br>
-      <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 85% × TV<sub>WM</sub> + 15% × TV<sub>RAT</sub><br>
-      <span class="step-label">Step 5</span>&nbsp; Age factor (youth +100%, 35+ −3%/yr) → normalize to Pool = Trade Value
-    </div>
-  </div>
-</div>
-
-<div class="footer">Hoopsmatic — NBA Trade Value Rankings v1.5 — Data fetched live from Google Sheets</div>
+<div class="footer">Hoopsmatic — NBA Trade Value Rankings v1.7 — Data fetched live from Google Sheets</div>
 
 <script>
 const SHEET_ID = '2PACX-1vSg6im6IYB6HXMGzQbmmBnLw9SfQLzxCSo8OfChxlJLhsB6BBCO0wPF_TMch0YgAbtFqYkwDWrsxRe7';
@@ -440,9 +413,6 @@ function renderTable(players) {
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
       <td class="col-rank ${rankCls(p.rank)}">${p.rank}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
-      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}</div></td>
-      <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}</td>
-      <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
       <td class="col-num col-trade-value">${fmtFull$(p.tradeValue)}</td>
       <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text-secondary)'}">${p.category}</td>
