@@ -178,6 +178,7 @@
         <th style="text-align:right">Watermark</th>
         <th style="text-align:right">Salary</th>
         <th style="text-align:right">Trade Value</th>
+        <th style="text-align:center">Category</th>
         <th style="text-align:right">Surplus</th>
       </tr>
     </thead>
@@ -379,20 +380,31 @@ function processData(rows) {
   for (const p of roster) {
     p.uncappedTV = Math.round((p.tvWithAge / totalWithAge) * totalSalaryPool);
     p.exp = (expMap[p.player] !== undefined) ? expMap[p.player] : null;
-    p.salFloor = p.exp !== null ? getMinSal(p.exp) : null;
     p.salCeil = p.exp !== null ? getMaxSal(p.exp) : null;
+    // Floor: two-way for ≤3 yrs if under two-way; vet min if between two-way and vet min
+    const vetMin = p.exp !== null ? (p.exp >= 10 ? MIN_SAL_10 : (MIN_SAL[p.exp] || MIN_SAL[0])) : null;
+    p.salFloor = p.exp !== null ? (p.exp <= 3 ? TWO_WAY_SAL : vetMin) : null;
     p.capped = false;
     p.floored = false;
+    p.twoWay = false;
     if (p.exp !== null && p.uncappedTV > p.salCeil) { p.tradeValue = p.salCeil; p.capped = true; }
-    else if (p.exp !== null && p.uncappedTV < p.salFloor) { p.tradeValue = p.salFloor; p.floored = true; }
+    else if (p.exp !== null && p.exp <= 3 && p.uncappedTV < TWO_WAY_SAL) { p.tradeValue = TWO_WAY_SAL; p.floored = true; p.twoWay = true; }
+    else if (p.exp !== null && p.uncappedTV < vetMin) { p.tradeValue = vetMin; p.floored = true; }
     else { p.tradeValue = p.uncappedTV; }
+    // Category label
+    if (p.capped) { p.category = 'Max Player'; }
+    else if (p.twoWay) { p.category = 'Two-Way Player'; }
+    else if (p.floored) { p.category = 'Minimum Contract Player'; }
+    else { p.category = fmtFull$(p.uncappedTV); }
     p.surplus = p.tradeValue - p.salary;
   }
+  // Pool = sum of capped trade values
+  const cappedPool = roster.reduce((s,p) => s + p.tradeValue, 0);
   // Rank by uncapped (real) value
   roster.sort((a,b) => b.uncappedTV - a.uncappedTV);
   roster.forEach((p,i) => p.rank = i+1);
 
-  return { players: roster, totalSalaryPool, exponent: EXPONENT, avgAge };
+  return { players: roster, totalSalaryPool: cappedPool, exponent: EXPONENT, avgAge };
 }
 
 let appData = null;
@@ -431,7 +443,8 @@ function renderTable(players) {
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}</td>
       <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
-      <td class="col-num col-trade-value">${fmtFull$(p.tradeValue)}${p.capped ? `<div style="font-size:0.65rem;color:var(--text-muted);margin-top:1px">MAX · real: ${fmt$(p.uncappedTV)}</div>` : ''}${p.floored ? `<div style="font-size:0.65rem;color:var(--text-muted);margin-top:1px">MIN</div>` : ''}</td>
+      <td class="col-num col-trade-value">${fmtFull$(p.tradeValue)}</td>
+      <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text-secondary)'}">${p.category}</td>
       <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span></div></td>
     </tr>`;
   }).join('');
