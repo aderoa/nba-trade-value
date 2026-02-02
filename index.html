@@ -163,15 +163,6 @@
       <option value="salary-asc">Salary ↑</option>
     </select>
   </div>
-  <div class="filter-group" style="margin-left:auto;">
-    <button id="snapshotBtn" class="ctrl-btn" disabled>📸 Snapshot</button>
-    <button id="refreshBtn" class="ctrl-btn" disabled>🔄 Refresh</button>
-    <button id="clearSnapBtn" class="ctrl-btn" style="display:none">✕ Clear</button>
-  </div>
-</div>
-
-<div class="snap-banner" id="snapBanner" style="display:none">
-  <div class="snap-banner-inner">📸 Snapshot locked — update your sheet, then hit <strong>Refresh</strong> to see changes</div>
 </div>
 
 <div id="loadingArea">
@@ -402,68 +393,6 @@ function processData(rows) {
 }
 
 let appData = null;
-let snapshot = null;
-
-function takeSnapshot() {
-  if (!appData) return;
-  snapshot = {};
-  for (const p of appData.players) {
-    snapshot[p.player] = { rank: p.rank, tv: p.uncappedTV, surplus: p.surplus };
-  }
-  document.getElementById('snapBanner').style.display = 'block';
-  document.getElementById('snapshotBtn').classList.add('active');
-  document.getElementById('snapshotBtn').textContent = '📸 Locked';
-  document.getElementById('clearSnapBtn').style.display = '';
-  update();
-}
-
-function clearSnapshot() {
-  snapshot = null;
-  document.getElementById('snapBanner').style.display = 'none';
-  document.getElementById('snapshotBtn').classList.remove('active');
-  document.getElementById('snapshotBtn').textContent = '📸 Snapshot';
-  document.getElementById('clearSnapBtn').style.display = 'none';
-  update();
-}
-
-async function refreshData() {
-  const btn = document.getElementById('refreshBtn');
-  btn.textContent = '⏳ Loading...';
-  btn.disabled = true;
-  try {
-    const res = await fetch(CSV_URL + '&_t=' + Date.now());
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    appData = processData(parseCSV(text));
-    buildStats(appData);
-    update();
-    btn.textContent = '✅ Updated';
-    setTimeout(() => { btn.textContent = '🔄 Refresh'; }, 1500);
-  } catch(err) {
-    btn.textContent = '❌ Error';
-    setTimeout(() => { btn.textContent = '🔄 Refresh'; }, 2000);
-  }
-  btn.disabled = false;
-}
-
-function deltaHTML(cur, prev, invert) {
-  if (prev === undefined || prev === null) return '';
-  const d = cur - prev;
-  if (Math.abs(d) < 0.005) return '';
-  const sign = invert ? -d : d;
-  const cls = sign > 0 ? 'delta-up' : 'delta-down';
-  const arrow = sign > 0 ? '▲' : '▼';
-  return `<span class="delta ${cls}">${arrow}${Math.abs(d) >= 1e5 ? fmt$(Math.abs(d)) : Math.abs(d).toLocaleString(undefined,{maximumFractionDigits:2})}</span>`;
-}
-
-function rankDelta(cur, prev) {
-  if (prev === undefined || prev === null) return '';
-  const d = prev - cur;
-  if (d === 0) return '';
-  const cls = d > 0 ? 'delta-up' : 'delta-down';
-  const arrow = d > 0 ? '▲' : '▼';
-  return `<span class="delta ${cls}">${arrow}${Math.abs(d)}</span>`;
-}
 
 function fmt$(n) { const a=Math.abs(n); if(a>=1e6)return(n<0?'-':'')+'$'+(a/1e6).toFixed(1)+'M'; if(a>=1e3)return(n<0?'-':'')+'$'+(a/1e3).toFixed(0)+'K'; return '$'+n.toLocaleString(); }
 function fmtFull$(n) { return (n<0?'-$':'$')+Math.abs(n).toLocaleString(); }
@@ -492,14 +421,13 @@ function renderTable(players) {
   document.getElementById('tableBody').innerHTML = players.map((p,i) => {
     const pct = Math.min(Math.abs(p.surplus)/maxS*50, 50);
     const bc = p.surplus>=0?'positive':'negative';
-    const s = snapshot ? snapshot[p.player] : null;
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
-      <td class="col-rank ${rankCls(p.rank)}">${p.rank}${s ? rankDelta(p.rank, s.rank) : ''}</td>
+      <td class="col-rank ${rankCls(p.rank)}">${p.rank}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
-      <td class="col-num col-trade-value">${fmtFull$(p.tradeValue)}${s ? deltaHTML(p.uncappedTV, s.tv, false) : ''}</td>
+      <td class="col-num col-trade-value">${fmtFull$(p.tradeValue)}</td>
       <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text-secondary)'}">${p.category}</td>
-      <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span>${s ? deltaHTML(p.surplus, s.surplus, false) : ''}</div></td>
+      <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span></div></td>
     </tr>`;
   }).join('');
 }
@@ -545,11 +473,6 @@ async function init() {
     document.getElementById('searchInput').addEventListener('input', update);
     document.getElementById('teamFilter').addEventListener('change', update);
     document.getElementById('sortSelect').addEventListener('change', update);
-    document.getElementById('snapshotBtn').disabled = false;
-    document.getElementById('refreshBtn').disabled = false;
-    document.getElementById('snapshotBtn').addEventListener('click', takeSnapshot);
-    document.getElementById('refreshBtn').addEventListener('click', refreshData);
-    document.getElementById('clearSnapBtn').addEventListener('click', clearSnapshot);
   } catch(err) {
     document.getElementById('loadingArea').innerHTML =
       `<div class="error-msg"><p>⚠️ Failed to fetch data: ${err.message}</p><p style="color:var(--text-muted);margin-top:0.5rem;font-size:0.85rem;">Make sure the Google Sheet is published: File → Share → Publish to web → Entire Document</p></div>`;
