@@ -254,7 +254,7 @@ function processData(rows) {
   }
 
   const playerHist = {};
-  for (const h of historical) { if (!playerHist[h.player]) playerHist[h.player] = []; playerHist[h.player].push(h); }
+  for (const h of historical) { const k = h.player.toLowerCase(); if (!playerHist[k]) playerHist[k] = []; playerHist[k].push(h); }
 
   const totalSalaryPool = roster.reduce((s,p) => s + p.salary, 0);
 
@@ -263,7 +263,7 @@ function processData(rows) {
   const EXPECTED = {'2021-22':82,'2022-23':82,'2023-24':82,'2024-25':82,'2025-26':48};
 
   for (const p of roster) {
-    const hist = playerHist[p.player] || [];
+    const hist = playerHist[p.player.toLowerCase()] || [];
     let num = 0, den = 0;
     for (const h of hist) {
       const w = SEASON_WEIGHT[h.year] || 0;
