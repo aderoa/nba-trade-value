@@ -144,8 +144,8 @@
   <div class="filter-group">
     <label>Sort</label>
     <select id="sortSelect" disabled>
-      <option value="tradeValue-desc">Trade Value ↓</option>
-      <option value="tradeValue-asc">Trade Value ↑</option>
+      <option value="uncappedTV-desc">Trade Value ↓</option>
+      <option value="uncappedTV-asc">Trade Value ↑</option>
       <option value="surplus-desc">Surplus ↓</option>
       <option value="surplus-asc">Surplus ↑</option>
       <option value="watermark-desc">Watermark ↓</option>
@@ -220,6 +220,15 @@ const GAMES_BETA = 0.8;
 const GAMES_MAX_MULT = 1.4;
 const GAMES_MIN_PCT = 0.40;
 
+// NBA 2025-26 salary floor (minimums) and ceiling (max) by experience
+const SAL_CAP = 154647000;
+const MIN_SAL = {0:1272870,1:2048494,2:2296274,3:2378870,4:2461463,5:2667947,6:2874436,7:3080921,8:3287409,9:3303774};
+const MIN_SAL_10 = 3634153;
+const MAX_SAL = {0:Math.round(SAL_CAP*0.25),7:Math.round(SAL_CAP*0.30),10:Math.round(SAL_CAP*0.35)};
+const TWO_WAY_SAL = 636435;
+function getMinSal(exp) { if (exp <= 3) return TWO_WAY_SAL; return exp >= 10 ? MIN_SAL_10 : (MIN_SAL[exp] || MIN_SAL[0]); }
+function getMaxSal(exp) { if (exp >= 10) return MAX_SAL[10]; if (exp >= 7) return MAX_SAL[7]; return MAX_SAL[0]; }
+
 function parseCSV(text) {
   const rows = []; let current = '', inQuotes = false, row = [];
   for (let i = 0; i < text.length; i++) {
@@ -248,13 +257,16 @@ function processData(rows) {
   const roster = [], historical = [];
   let todayStr = null;
   const shootingMap = {};
+  const expMap = {};
 
   for (const row of dataRows) {
-    while (row.length < 20) row.push('');
+    while (row.length < 21) row.push('');
     // Grab today's date from col S (index 18)
     if (row[18] && !todayStr) todayStr = row[18];
     if (row[0] && row[1]) {
       roster.push({ team: row[0], player: row[1], rat365: parseFloat(row[2]) || 0, salary: parseInt(row[3].replace(/[$,]/g,'')) || 0, birthday: row[4] || '' });
+      // EXP column (index 19)
+      if (row[19]) { const ev = parseInt(row[19]); if (!isNaN(ev)) expMap[row[1].trim()] = ev; }
     }
     if (row[6] && row[7]) {
       const g = parseInt(row[9]) || 0;
@@ -365,10 +377,19 @@ function processData(rows) {
   }
   const totalWithAge = roster.reduce((s,p) => s + p.tvWithAge, 0);
   for (const p of roster) {
-    p.tradeValue = Math.round((p.tvWithAge / totalWithAge) * totalSalaryPool);
+    p.uncappedTV = Math.round((p.tvWithAge / totalWithAge) * totalSalaryPool);
+    p.exp = (expMap[p.player] !== undefined) ? expMap[p.player] : null;
+    p.salFloor = p.exp !== null ? getMinSal(p.exp) : null;
+    p.salCeil = p.exp !== null ? getMaxSal(p.exp) : null;
+    p.capped = false;
+    p.floored = false;
+    if (p.exp !== null && p.uncappedTV > p.salCeil) { p.tradeValue = p.salCeil; p.capped = true; }
+    else if (p.exp !== null && p.uncappedTV < p.salFloor) { p.tradeValue = p.salFloor; p.floored = true; }
+    else { p.tradeValue = p.uncappedTV; }
     p.surplus = p.tradeValue - p.salary;
   }
-  roster.sort((a,b) => b.tradeValue - a.tradeValue);
+  // Rank by uncapped (real) value
+  roster.sort((a,b) => b.uncappedTV - a.uncappedTV);
   roster.forEach((p,i) => p.rank = i+1);
 
   return { players: roster, totalSalaryPool, exponent: EXPONENT, avgAge };
@@ -410,7 +431,7 @@ function renderTable(players) {
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}</td>
       <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
-      <td class="col-num col-trade-value">${fmtFull$(p.tradeValue)}</td>
+      <td class="col-num col-trade-value">${fmtFull$(p.tradeValue)}${p.capped ? `<div style="font-size:0.65rem;color:var(--text-muted);margin-top:1px">MAX · real: ${fmt$(p.uncappedTV)}</div>` : ''}${p.floored ? `<div style="font-size:0.65rem;color:var(--text-muted);margin-top:1px">MIN</div>` : ''}</td>
       <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span></div></td>
     </tr>`;
   }).join('');
