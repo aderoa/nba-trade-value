@@ -192,7 +192,7 @@
     <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating uses three windows: <code>A)</code> Average RAT per game across all 5 seasons, <code>B)</code> Average RAT per game over the last 3 seasons, and <code>C)</code> Average RAT per game in 2025-26. A component is only included if it adds new data — if a player's 5-year and 3-year windows cover the same seasons (e.g. a 3rd-year player), the 5-year component is skipped to avoid double-counting. A rookie uses only C. Hover over any Watermark to see the breakdown.</p>
     <p>The final Trade Value is a <strong style="color:var(--text-primary)">75/25 blend</strong>: 75% from the Watermark-based distribution and 25% from the RAT 365-based distribution. Both distributions use an exponent of <code>1.4</code>, creating a progressive curve where elite production is rewarded exponentially.</p>
     <p>A <strong style="color:var(--text-primary)">games-played correction</strong> is applied to both Watermark and RAT 365 to compensate for the Global Rating's built-in availability penalty. Players who miss games are already penalized in their per-game rate by RAT; this correction partially undoes that double-counting. For each window, the per-game average is adjusted by <code>(expected games / actual games)^0.8</code>, capped at 1.4× and only applied when a player has appeared in at least 40% of expected games. Hover over any age to see the correction factor.</p>
-    <p>An <strong style="color:var(--text-primary)">age factor</strong> of <code>±20%</code> is then applied. The league average age serves as the neutral point — younger players receive up to a 20% bonus, older players up to a 20% penalty, scaling linearly. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
+    <p>An <strong style="color:var(--text-primary)">age factor</strong> of <code>±33%</code> is then applied. The league average age serves as the neutral point — younger players receive up to a 33% bonus, older players up to a 33% penalty, scaling linearly. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
     <div class="formula-block">
       <span class="step-label">Step 1</span>&nbsp; Watermark = avg( A: 5yr RAT/g, B: 3yr RAT/g, C: 2025-26 RAT/g ) — skip redundant windows<br>
       <span class="step-label">Step 2</span>&nbsp; Games correction: adj = raw × min(1.4, (expected/actual)^0.8) per window<br>
@@ -212,7 +212,7 @@ const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=${
 const EXPONENT = 1.4;
 const WM_WEIGHT = 0.75;
 const RAT_WEIGHT = 0.25;
-const AGE_MAX_BONUS = 0.20;
+const AGE_MAX_BONUS = 0.33;
 const GAMES_BETA = 0.8;
 const GAMES_MAX_MULT = 1.4;
 const GAMES_MIN_PCT = 0.40;
@@ -387,7 +387,7 @@ function buildStats(d) {
     {l:'Salary Pool',v:'$'+(d.totalSalaryPool/1e9).toFixed(2),u:'B'},
     {l:'Players Ranked',v:d.players.length,u:''},
     {l:'Avg Age',v:d.avgAge.toFixed(1),u:' yrs'},
-    {l:'Formula',v:'75/25',u:' + age + GP corr'}
+    {l:'Formula',v:'75/25',u:' + age±33% + GP'}
   ].map(s=>`<div class="stat-card"><div class="label">${s.l}</div><div class="value">${s.v}<span class="unit">${s.u}</span></div></div>`).join('');
 }
 
