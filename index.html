@@ -247,17 +247,23 @@ function processData(rows) {
   const dataRows = rows.slice(1);
   const roster = [], historical = [];
   let todayStr = null;
+  const shootingMap = {};
 
   for (const row of dataRows) {
     while (row.length < 20) row.push('');
-    // Grab today's date from col T (index 19)
-    if (row[19] && !todayStr) todayStr = row[19];
+    // Grab today's date from col S (index 18)
+    if (row[18] && !todayStr) todayStr = row[18];
     if (row[0] && row[1]) {
       roster.push({ team: row[0], player: row[1], rat365: parseFloat(row[2]) || 0, salary: parseInt(row[3].replace(/[$,]/g,'')) || 0, birthday: row[4] || '' });
     }
     if (row[6] && row[7]) {
       const g = parseInt(row[9]) || 0;
       if (g > 0) historical.push({ year: row[6], player: row[7], totalRat: parseFloat(row[8].replace(/,/g,'')) || 0, games: g });
+    }
+    // Shooting penalty (col 12=player, col 17=shooting, 2025-26 block)
+    if (row[12] && row[17]) {
+      const sv = parseFloat(row[17]);
+      if (!isNaN(sv) && sv > 0) shootingMap[row[12].trim()] = sv;
     }
   }
 
@@ -345,14 +351,17 @@ function processData(rows) {
     }
   }
 
-  // Trade value: 75/25 blend × age multiplier, then renormalize to pool
+  // Trade value: 85/15 blend × age multiplier × shooting penalty, then renormalize to pool
   const totalAdjWM = roster.reduce((s,p) => s + Math.pow(Math.max(p.watermark,0), EXPONENT), 0);
   const totalAdjRAT = roster.reduce((s,p) => s + Math.pow(Math.max(p.rat365adj,0), EXPONENT), 0);
   for (const p of roster) {
     const tvWM = (Math.pow(Math.max(p.watermark,0), EXPONENT) / totalAdjWM) * totalSalaryPool;
     const tvRAT = (Math.pow(Math.max(p.rat365adj,0), EXPONENT) / totalAdjRAT) * totalSalaryPool;
     p.tvPreAge = WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT;
-    p.tvWithAge = p.tvPreAge * p.ageMult;
+    // Shooting penalty: decrease by (value × 100)%
+    p.shootingPenalty = (shootingMap[p.player] || 0) * 2;
+    p.shootingMult = 1 - p.shootingPenalty;
+    p.tvWithAge = p.tvPreAge * p.ageMult * p.shootingMult;
   }
   const totalWithAge = roster.reduce((s,p) => s + p.tvWithAge, 0);
   for (const p of roster) {
@@ -397,7 +406,7 @@ function renderTable(players) {
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
       <td class="col-rank ${rankCls(p.rank)}">${p.rank}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
-      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span></div></td>
+      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}</div></td>
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}</td>
       <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
