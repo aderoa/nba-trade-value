@@ -189,16 +189,16 @@
   <div class="method-card">
     <h3>Methodology</h3>
     <p>Trade values are distributed from a <strong style="color:var(--text-primary)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
-    <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating uses a time-decay weighted average: each game's per-game RAT contributes weighted by its season's recency — 2025-26 at full weight (1.0), 2024-25 at 0.8, 2023-24 at 0.6, 2022-23 at 0.4, and 2021-22 at 0.2. Recent performance matters most while still crediting a strong track record. Hover over any Watermark to see the per-season breakdown.</p>
+    <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating uses a time-decay weighted average: each game's per-game RAT contributes weighted by its season's recency — 2025-26 at full weight (1.0), then decaying by 0.6× per year back (0.6, 0.36, 0.216, 0.13). Recent performance matters most while still crediting a strong track record. Hover over any Watermark to see the per-season breakdown.</p>
     <p>The final Trade Value is a <strong style="color:var(--text-primary)">75/25 blend</strong>: 75% from the Watermark-based distribution and 25% from the RAT 365-based distribution. Both distributions use an exponent of <code>1.4</code>, creating a progressive curve where elite production is rewarded exponentially.</p>
     <p>A <strong style="color:var(--text-primary)">games-played correction</strong> is applied per-season to compensate for the Global Rating's built-in availability penalty. For each season, the per-game average is adjusted by <code>(expected / actual)^0.8</code>, capped at 1.4× and only for players with ≥40% of expected games. The same correction is applied to RAT 365.</p>
-    <p>An <strong style="color:var(--text-primary)">age factor</strong> of <code>±33%</code> is then applied. The league average age serves as the neutral point — younger players receive up to a 33% bonus, older players up to a 33% penalty, scaling linearly. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
+    <p>An <strong style="color:var(--text-primary)">age factor</strong> rewards youth and mildly penalizes age. Players below the league average age (~26.5) receive up to a 2× bonus scaling linearly to the youngest player. Players 35 and older receive a 3% penalty per year over 35 (floor 0.5×). Players between average and 35 are unaffected. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
     <div class="formula-block">
       <span class="step-label">Step 1</span>&nbsp; Watermark = Σ(weight × games × corrected RAT/g) ÷ Σ(weight × games) — time-decay per season<br>
       <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × min(1.4, (expected/actual)^0.8)<br>
       <span class="step-label">Step 3</span>&nbsp; TV<sub>WM</sub> = (Watermark^1.4 ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (adj RAT365^1.4 ÷ Σ) × Pool<br>
       <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 75% × TV<sub>WM</sub> + 25% × TV<sub>RAT</sub><br>
-      <span class="step-label">Step 5</span>&nbsp; Age factor (±33%) → normalize to Pool = Trade Value
+      <span class="step-label">Step 5</span>&nbsp; Age factor (youth +100%, 35+ −3%/yr) → normalize to Pool = Trade Value
     </div>
   </div>
 </div>
@@ -212,7 +212,10 @@ const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=${
 const EXPONENT = 1.4;
 const WM_WEIGHT = 0.75;
 const RAT_WEIGHT = 0.25;
-const AGE_MAX_BONUS = 0.33;
+const AGE_MAX_BONUS = 1.0;
+const OLD_THRESHOLD = 35;
+const OLD_PENALTY_PER_YEAR = 0.03;
+const OLD_FLOOR = 0.50;
 const GAMES_BETA = 0.8;
 const GAMES_MAX_MULT = 1.4;
 const GAMES_MIN_PCT = 0.40;
@@ -263,7 +266,7 @@ function processData(rows) {
 
   const totalSalaryPool = roster.reduce((s,p) => s + p.salary, 0);
 
-  const SEASON_WEIGHT = {'2025-26':1.0,'2024-25':0.8,'2023-24':0.6,'2022-23':0.4,'2021-22':0.2};
+  const SEASON_WEIGHT = {'2025-26':1.0,'2024-25':0.6,'2023-24':0.36,'2022-23':0.216,'2021-22':0.1296};
   const CUR_YEAR = '2025-26';
   const EXPECTED = {'2021-22':82,'2022-23':82,'2023-24':82,'2024-25':82,'2025-26':48};
 
@@ -329,13 +332,14 @@ function processData(rows) {
     }
   }
   const avgAge = ages.length > 0 ? ages.reduce((a,b) => a+b, 0) / ages.length : 26;
-  const maxDev = Math.max(...ages.map(a => Math.abs(a - avgAge)), 1);
+  const maxDevYoung = avgAge - Math.min(...ages);
 
-  // Age multiplier: linear ±20% from average age
+  // Age multiplier: youth bonus below avg, mild penalty above 35
   for (const p of roster) {
-    if (p.age !== null) {
-      p.ageMult = 1 + AGE_MAX_BONUS * (avgAge - p.age) / maxDev;
-      p.ageMult = Math.max(1 - AGE_MAX_BONUS, Math.min(1 + AGE_MAX_BONUS, p.ageMult));
+    if (p.age !== null && p.age < avgAge) {
+      p.ageMult = 1.0 + AGE_MAX_BONUS * (avgAge - p.age) / maxDevYoung;
+    } else if (p.age !== null && p.age >= OLD_THRESHOLD) {
+      p.ageMult = Math.max(OLD_FLOOR, 1.0 - OLD_PENALTY_PER_YEAR * (p.age - OLD_THRESHOLD));
     } else {
       p.ageMult = 1.0;
     }
@@ -375,7 +379,7 @@ function buildStats(d) {
     {l:'Salary Pool',v:'$'+(d.totalSalaryPool/1e9).toFixed(2),u:'B'},
     {l:'Players Ranked',v:d.players.length,u:''},
     {l:'Avg Age',v:d.avgAge.toFixed(1),u:' yrs'},
-    {l:'Formula',v:'75/25',u:' + age±33% + GP'}
+    {l:'Formula',v:'75/25',u:' + youth age + GP'}
   ].map(s=>`<div class="stat-card"><div class="label">${s.l}</div><div class="value">${s.v}<span class="unit">${s.u}</span></div></div>`).join('');
 }
 
