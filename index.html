@@ -391,7 +391,8 @@ function processData(rows) {
     else if (p.exp !== null && p.exp <= 3 && p.uncappedTV < TWO_WAY_SAL) { p.tradeValue = TWO_WAY_SAL; p.floored = true; p.twoWay = true; }
     else if (p.exp !== null && p.uncappedTV < vetMin) { p.tradeValue = vetMin; p.floored = true; }
     else { p.tradeValue = p.uncappedTV; }
-    // Category label
+    // Trade value = uncapped real value; category = label
+    p.tradeValue = p.uncappedTV;
     if (p.capped) { p.category = 'Max Player'; }
     else if (p.twoWay) { p.category = 'Two-Way Player'; }
     else if (p.floored) { p.category = 'Minimum Contract Player'; }
