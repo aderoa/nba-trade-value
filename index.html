@@ -466,17 +466,18 @@ function processData(rows) {
     p.potentialBonus = calcPotentialBonus(p.age, p.draftPick);
     p.uncappedTV = baseTV + p.potentialBonus;
     p.exp = (expMap[p.player] !== undefined) ? expMap[p.player] : null;
-    p.salCeil = p.exp !== null ? getMaxSal(p.exp) : null;
+    // Estimate experience from age if EXP column is missing
+    const effExp = p.exp !== null ? p.exp : (p.age !== null ? Math.max(0, Math.round(p.age - 19)) : 0);
+    p.salCeil = getMaxSal(effExp);
     // Floor: two-way for ≤3 yrs if under two-way; vet min if between two-way and vet min
-    const vetMin = p.exp !== null ? (p.exp >= 10 ? MIN_SAL_10 : (MIN_SAL[p.exp] || MIN_SAL[0])) : null;
-    p.salFloor = p.exp !== null ? (p.exp <= 3 ? TWO_WAY_SAL : vetMin) : null;
+    const vetMin = effExp >= 10 ? MIN_SAL_10 : (MIN_SAL[effExp] || MIN_SAL[0]);
+    p.salFloor = effExp <= 3 ? TWO_WAY_SAL : vetMin;
     p.capped = false;
     p.floored = false;
     p.twoWay = false;
-    if (p.exp !== null && p.uncappedTV > p.salCeil) { p.tradeValue = p.salCeil; p.capped = true; }
-    else if (p.exp !== null && p.exp <= 3 && p.uncappedTV < TWO_WAY_SAL) { p.tradeValue = TWO_WAY_SAL; p.floored = true; p.twoWay = true; }
-    else if (p.exp !== null && p.uncappedTV < vetMin) { p.tradeValue = vetMin; p.floored = true; }
-    else { p.tradeValue = p.uncappedTV; }
+    if (p.uncappedTV > p.salCeil) { p.capped = true; }
+    else if (effExp <= 3 && p.uncappedTV < TWO_WAY_SAL) { p.floored = true; p.twoWay = true; }
+    else if (p.uncappedTV < vetMin) { p.floored = true; }
     // Trade value = uncapped real value; category = label
     p.tradeValue = p.uncappedTV;
     if (p.capped) { p.category = 'Max Player'; }
