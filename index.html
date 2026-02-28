@@ -477,7 +477,7 @@ function processData(rows) {
     p.twoWay = false;
     if (p.uncappedTV > p.salCeil) { p.capped = true; }
     else if (effExp <= 3 && p.uncappedTV < TWO_WAY_SAL) { p.floored = true; p.twoWay = true; }
-    else if (p.uncappedTV < vetMin) { p.floored = true; }
+    else if (p.uncappedTV < vetMin && (effExp > 3 || p.uncappedTV >= TWO_WAY_SAL)) { p.floored = true; }
     // Trade value = uncapped real value; category = label
     p.tradeValue = p.uncappedTV;
     if (p.capped) { p.category = 'Max Player'; }
