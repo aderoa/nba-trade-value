@@ -471,6 +471,13 @@ function processData(rows) {
     p.potentialBonus = calcPotentialBonus(p.age, p.draftPick);
     p.uncappedTV = baseTV + p.potentialBonus;
   }
+  // Renormalize so total TV = salary pool (potential bonuses inflate the total)
+  const rawTotal = roster.reduce((s,p) => s + p.uncappedTV, 0);
+  const normFactor = totalSalaryPool / rawTotal;
+  for (const p of roster) {
+    p.uncappedTV = Math.round(p.uncappedTV * normFactor);
+    p.potentialBonus = Math.round(p.potentialBonus * normFactor);
+  }
   for (const p of roster) {
     p.exp = (expMap[p.player] !== undefined) ? expMap[p.player] : null;
     // Estimate experience from age if EXP column is missing
