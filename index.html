@@ -130,9 +130,9 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Trade Value Rankings</h1>
-      <span class="tag">v1.9</span>
+      <span class="tag">v2.0</span>
     </div>
-    <p class="header-subtitle">Watermark (85%) + RAT 365 (15%) + Age Factor + GP Age Fade + Star Premium — fixed league salary pool, progressive exponent</p>
+    <p class="header-subtitle">Watermark (85%) + RAT 365 (15%) + Age Factor + GP Age Fade — soft-capped exponent, fixed league salary pool</p>
   </div>
 </div>
 
@@ -211,30 +211,30 @@
     <h3>Methodology</h3>
     <p>Trade values are distributed from a <strong style="color:var(--text-primary)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
     <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating uses a time-decay weighted average: each game's per-game RAT contributes weighted by its season's recency — 2025-26 at full weight (1.0), then decaying by 0.6× per year back (0.6, 0.36, 0.216, 0.13). Recent performance matters most while still crediting a strong track record. Hover over any Watermark to see the per-season breakdown.</p>
-    <p>The final Trade Value is an <strong style="color:var(--text-primary)">85/15 blend</strong>: 85% from the Watermark-based distribution and 15% from the RAT 365-based distribution. Both distributions use an exponent of <code>1.8</code>, creating a steep progressive curve where elite production is rewarded exponentially.</p>
+    <p>The final Trade Value is an <strong style="color:var(--text-primary)">85/15 blend</strong>: 85% from the Watermark-based distribution and 15% from the RAT 365-based distribution. Both distributions use a <strong>soft-capped exponent</strong> <code>r^3.2 / (1 + r^3.2/14000)</code>, creating a steep progressive curve that rewards elite production while compressing extreme outliers at the top.</p>
     <p>A <strong style="color:var(--text-primary)">games-played correction</strong> is applied per-season to compensate for the Global Rating's built-in availability penalty. For each season, the per-game average is adjusted by <code>(expected / actual)^0.8</code>, capped at 1.4× and only for players with ≥40% of expected games. However, this correction <strong style="color:var(--text-primary)">fades with age</strong>: players over 28 receive progressively less GP correction, reflecting that older players are more likely to suffer recurring or decline-related injuries. The boost portion decays by <code>e^(-0.12 × (age − 28))</code>, so a 35-year-old retains only ~43% of the correction a younger player would get.</p>
     <p>An <strong style="color:var(--text-primary)">age factor</strong> rewards youth and mildly penalizes age. Players below the league average age (~26.5) receive up to a 2× bonus scaling linearly to the youngest player. Players 35 and older receive a 3% penalty per year over 35 (floor 0.5×). Players between average and 35 are unaffected. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
     <p>A <strong style="color:var(--accent-gold)">potential bonus</strong> (up to $7M) is added for players under 25, based on their draft position and age. Both factors use exponential decay: earlier draft picks and younger ages receive larger bonuses, with bigger gaps at the top (e.g., the difference between pick 1 and 2 is larger than between picks 59 and 60). Hover over the Age column to see the potential bonus breakdown.</p>
-    <p>A <strong style="color:var(--accent-gold)">star premium</strong> is applied to players whose base trade value exceeds $25M. The boost is multiplicative — <code>TV × (1 + 1.5 × ratio^0.5)</code> where ratio measures how far above the $25M floor a player sits relative to the top-ranked player. After applying the premium, all values are <strong style="color:var(--text-primary)">renormalized</strong> so the total still equals the salary pool, then a <strong style="color:var(--text-primary)">hard cap of $95M</strong> is enforced — any excess above $95M is redistributed proportionally to remaining players. This produces ~32 max-contract players, matching the real NBA.</p>
+    <p>The distribution uses a <strong style="color:var(--accent-gold)">soft-capped exponent</strong> — <code>score = r^3.2 / (1 + r^3.2 / 14000)</code> — instead of a plain power curve. For mid-tier players, this behaves like a normal r^3.2 distribution, creating enough separation to push ~32 players above max-contract thresholds. For elite outliers, the denominator grows, compressing the very top so no player exceeds ~$95M. The total always equals the salary pool by construction.</p>
     <div class="formula-block">
       <span class="step-label">Step 1</span>&nbsp; Watermark = Σ(weight × games × corrected RAT/g) ÷ Σ(weight × games) — time-decay per season<br>
       <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × (1 + (min(1.4, (exp/act)^0.8) − 1) × ageFade) &nbsp;|&nbsp; ageFade = e<sup>-0.12(age-28)</sup> if age &gt; 28, else 1.0<br>
-      <span class="step-label">Step 3</span>&nbsp; TV<sub>WM</sub> = (Watermark^1.8 ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (adj RAT365^1.8 ÷ Σ) × Pool<br>
+      <span class="step-label">Step 3</span>&nbsp; score(r) = r^3.2 ÷ (1 + r^3.2 / 14000) &nbsp;|&nbsp; TV<sub>WM</sub> = (score(WM) ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (score(RAT365) ÷ Σ) × Pool<br>
       <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 85% × TV<sub>WM</sub> + 15% × TV<sub>RAT</sub><br>
       <span class="step-label">Step 5</span>&nbsp; Age factor (youth +100%, 35+ −3%/yr) → normalize to Pool<br>
-      <span class="step-label">Step 6</span>&nbsp; Potential bonus = $7M × e<sup>-0.05(pick-1)</sup> × e<sup>-0.5(age-18.82)</sup> (under 25 only)<br>
-      <span class="step-label">Step 7</span>&nbsp; Star premium: TV × (1 + 1.5 × ((TV − $25M) ÷ (TV<sub>max</sub> − $25M))<sup>0.5</sup>) for TV &gt; $25M → renormalize to Pool → hard cap $95M (excess redistributed)
+      <span class="step-label">Step 6</span>&nbsp; Potential bonus = $7M × e<sup>-0.05(pick-1)</sup> × e<sup>-0.5(age-18.82)</sup> (under 25 only)
     </div>
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Trade Value Rankings v1.9 — Data fetched live from Google Sheets</div>
+<div class="footer">Hoopsmatic — NBA Trade Value Rankings v2.0 — Data fetched live from Google Sheets</div>
 
 <script>
 const SHEET_ID = '2PACX-1vSg6im6IYB6HXMGzQbmmBnLw9SfQLzxCSo8OfChxlJLhsB6BBCO0wPF_TMch0YgAbtFqYkwDWrsxRe7';
 const GID = '1310971167';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=${GID}&single=true&output=csv`;
-const EXPONENT = 1.8;
+const EXPONENT = 3.2;
+const KNEE = 14000; // Soft-cap: score = r^EXP / (1 + r^EXP / KNEE)
 const WM_WEIGHT = 0.85;
 const RAT_WEIGHT = 0.15;
 const AGE_MAX_BONUS = 1.0;
@@ -253,12 +253,6 @@ const MIN_ROOKIE_AGE = 18 + 300/365; // 18 years 300 days (youngest realistic de
 const MAX_POTENTIAL_AGE = 25; // No potential bonus after 25
 const DRAFT_DECAY = 0.05; // Exponential decay rate for draft position
 const AGE_DECAY = 0.5; // Exponential decay rate for age
-
-// Star premium: multiplicative boost for top players to reach realistic max contract count
-const STAR_MULT = 1.50; // Multiplier strength
-const STAR_EXP = 0.50; // Exponent (lower = more spread)
-const STAR_FLOOR = 25000000; // Only players above this base TV get the boost
-const TV_HARD_CAP = 95000000; // Maximum trade value ceiling
 
 // NBA 2025-26 salary floor (minimums) and ceiling (max) by experience
 const SAL_CAP = 154647000;
@@ -442,11 +436,13 @@ function processData(rows) {
   }
 
   // Trade value: 85/15 blend × age multiplier × shooting penalty, then renormalize to pool
-  const totalAdjWM = roster.reduce((s,p) => s + Math.pow(Math.max(p.watermark,0), EXPONENT), 0);
-  const totalAdjRAT = roster.reduce((s,p) => s + Math.pow(Math.max(p.rat365adj,0), EXPONENT), 0);
+  // Soft-capped exponent: compresses elite outliers while preserving mid-tier separation
+  function softScore(r) { const s = Math.pow(Math.max(r, 0), EXPONENT); return s / (1.0 + s / KNEE); }
+  const totalAdjWM = roster.reduce((s,p) => s + softScore(p.watermark), 0);
+  const totalAdjRAT = roster.reduce((s,p) => s + softScore(p.rat365adj), 0);
   for (const p of roster) {
-    const tvWM = (Math.pow(Math.max(p.watermark,0), EXPONENT) / totalAdjWM) * totalSalaryPool;
-    const tvRAT = (Math.pow(Math.max(p.rat365adj,0), EXPONENT) / totalAdjRAT) * totalSalaryPool;
+    const tvWM = (softScore(p.watermark) / totalAdjWM) * totalSalaryPool;
+    const tvRAT = (softScore(p.rat365adj) / totalAdjRAT) * totalSalaryPool;
     p.tvPreAge = WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT;
     // Shooting penalty: decrease by (value × 100)%
     p.shootingPenalty = (shootingMap[p.player] || 0) * 2;
@@ -469,45 +465,11 @@ function processData(rows) {
     return Math.round(POTENTIAL_MAX * draftFactor * ageFactor);
   }
   
-  // Find top TV for star premium normalization
-  const allBaseTV = roster.map(p => Math.round((p.tvWithAge / totalWithAge) * totalSalaryPool) + calcPotentialBonus(p.age, p.draftPick));
-  const topBaseTV = Math.max(...allBaseTV);
-
+  // Compute final trade values: base TV + potential bonus
   for (const p of roster) {
     const baseTV = Math.round((p.tvWithAge / totalWithAge) * totalSalaryPool);
     p.potentialBonus = calcPotentialBonus(p.age, p.draftPick);
-    const prePremiumTV = baseTV + p.potentialBonus;
-    // Star premium: multiplicative boost for elite players
-    if (prePremiumTV > STAR_FLOOR) {
-      const ratio = (prePremiumTV - STAR_FLOOR) / (topBaseTV - STAR_FLOOR);
-      p.starMult = 1.0 + STAR_MULT * Math.pow(ratio, STAR_EXP);
-      p.starBonus = Math.round(prePremiumTV * p.starMult) - prePremiumTV;
-    } else {
-      p.starMult = 1.0;
-      p.starBonus = 0;
-    }
-    p.rawTV = prePremiumTV + p.starBonus;
-  }
-  // Renormalize so total TV = salary pool (star premium inflates the total)
-  const rawTotal = roster.reduce((s,p) => s + p.rawTV, 0);
-  const normFactor = totalSalaryPool / rawTotal;
-  for (const p of roster) {
-    p.uncappedTV = Math.round(p.rawTV * normFactor);
-    p.starBonus = Math.round(p.starBonus * normFactor);
-  }
-  // Hard cap: shave excess from players over TV_HARD_CAP, redistribute proportionally
-  const excess = roster.reduce((s,p) => s + Math.max(0, p.uncappedTV - TV_HARD_CAP), 0);
-  if (excess > 0) {
-    const uncappedSum = roster.filter(p => p.uncappedTV <= TV_HARD_CAP).reduce((s,p) => s + p.uncappedTV, 0);
-    for (const p of roster) {
-      if (p.uncappedTV > TV_HARD_CAP) {
-        p.starBonus -= (p.uncappedTV - TV_HARD_CAP);
-        p.uncappedTV = TV_HARD_CAP;
-      } else if (uncappedSum > 0) {
-        const share = Math.round(p.uncappedTV / uncappedSum * excess);
-        p.uncappedTV += share;
-      }
-    }
+    p.uncappedTV = baseTV + p.potentialBonus;
   }
   for (const p of roster) {
     p.exp = (expMap[p.player] !== undefined) ? expMap[p.player] : null;
@@ -616,7 +578,7 @@ function buildStats(d) {
     {l:'Salary Pool',v:'$'+(d.totalSalaryPool/1e9).toFixed(2),u:'B'},
     {l:'Players Ranked',v:d.players.length,u:''},
     {l:'Avg Age',v:d.avgAge.toFixed(1),u:' yrs'},
-    {l:'Formula',v:'85/15',u:' + age + GP fade + ⭐'}
+    {l:'Formula',v:'85/15',u:' + age + GP fade + soft cap'}
   ].map(s=>`<div class="stat-card"><div class="label">${s.l}</div><div class="value">${s.v}<span class="unit">${s.u}</span></div></div>`).join('');
 }
 
@@ -635,7 +597,7 @@ function renderTable(players) {
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
       <td class="col-rank ${rankCls(p.rank)}">${p.rank}${s ? rankDelta(p.rank, s.rank) : ''}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
-      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}${p.starBonus > 0 ? `<br><span class="tt-label">Star premium:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.starBonus)}</span> <span class="tt-label">(${p.starMult.toFixed(2)}x)</span>` : ''}</div></td>
+      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}${s ? deltaHTML(p.rat365, s.rat365, false) : ''}</td>
       <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}${s ? deltaHTML(p.watermark, s.watermark, false) : ''}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
