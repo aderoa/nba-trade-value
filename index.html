@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.3</span>
+      <span class="tag">v2.4</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -233,12 +233,16 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.3 — Data fetched live from Google Sheets</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.4 — Live data via Google Sheets API</div>
 
 <script>
-const SHEET_ID = '2PACX-1vSg6im6IYB6HXMGzQbmmBnLw9SfQLzxCSo8OfChxlJLhsB6BBCO0wPF_TMch0YgAbtFqYkwDWrsxRe7';
-const GID = '1310971167';
-const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=${GID}&single=true&output=csv`;
+const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
+const API_KEY = 'AIzaSyB9g7c6llswswuZQ2I5y2MwGk6BzYEtHsY';
+const RATINGS_TAB = 'Sheet3';
+const CONTRACT_TAB = 'Sheet6';
+const SHEETS_API = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values`;
+const RATINGS_URL = `${SHEETS_API}/${RATINGS_TAB}?key=${API_KEY}`;
+const CONTRACT_URL = `${SHEETS_API}/${CONTRACT_TAB}?key=${API_KEY}`;
 const EXPONENT = 3.2;
 const KNEE = 14000; // Soft-cap: score = r^EXP / (1 + r^EXP / KNEE)
 const WM_WEIGHT = 0.85;
@@ -282,10 +286,6 @@ const CAP_PROJ = {
   2034: 233579000,  // 2033-34
   2035: 245258000,  // 2034-35
 };
-
-// Contracts sheet
-const CONTRACT_GID = '1649473047';
-const CONTRACT_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=${CONTRACT_GID}&single=true&output=csv`;
 
 function parseCSV(text) {
   const rows = []; let current = '', inQuotes = false, row = [];
@@ -689,13 +689,13 @@ async function refreshData() {
   btn.disabled = true;
   try {
     const [res, cRes] = await Promise.all([
-      fetch(CSV_URL + '&_t=' + Date.now()),
-      fetch(CONTRACT_URL + '&_t=' + Date.now())
+      fetch(RATINGS_URL),
+      fetch(CONTRACT_URL)
     ]);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    const contractRows = cRes.ok ? parseCSV(await cRes.text()) : [];
-    appData = processData(parseCSV(text), contractRows);
+    const ratingsRows = (await res.json()).values || [];
+    const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
+    appData = processData(ratingsRows, contractRows);
     buildStats(appData);
     update();
     btn.textContent = '✅ Updated';
@@ -794,13 +794,13 @@ function update() {
 async function init() {
   try {
     const [res, cRes] = await Promise.all([
-      fetch(CSV_URL),
+      fetch(RATINGS_URL),
       fetch(CONTRACT_URL)
     ]);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    const contractRows = cRes.ok ? parseCSV(await cRes.text()) : [];
-    appData = processData(parseCSV(text), contractRows);
+    const ratingsRows = (await res.json()).values || [];
+    const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
+    appData = processData(ratingsRows, contractRows);
 
     document.getElementById('loadingArea').style.display = 'none';
     document.getElementById('tableContainer').style.display = 'block';
