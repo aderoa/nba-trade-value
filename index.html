@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.1</span>
+      <span class="tag">v2.3</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -220,7 +220,7 @@
     <p>An <strong style="color:var(--text-primary)">age factor</strong> rewards youth and mildly penalizes age. Players below the league average age (~26.5) receive up to a 2× bonus scaling linearly to the youngest player. Players 35 and older receive a 3% penalty per year over 35 (floor 0.5×). Players between average and 35 are unaffected. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
     <p>A <strong style="color:var(--accent-gold)">potential bonus</strong> (up to $18M) is added for players under 25, based on their draft position and age. Both factors use exponential decay: earlier draft picks and younger ages receive larger bonuses, with bigger gaps at the top (e.g., the difference between pick 1 and 2 is larger than between picks 59 and 60). Hover over the Age column to see the potential bonus breakdown.</p>
     <p>The distribution uses a <strong style="color:var(--accent-gold)">soft-capped exponent</strong> — <code>score = r^3.2 / (1 + r^3.2 / 14000)</code> — instead of a plain power curve. For mid-tier players, this behaves like a normal r^3.2 distribution, creating enough separation to push ~32 players above max-contract thresholds. For elite outliers, the denominator grows, compressing the very top so no player exceeds ~$95M. The total always equals the salary pool by construction.</p>
-    <p><strong style="color:var(--accent)">Trade Value</strong> measures a player's contract-adjusted worth, starting from the 2025-26 surplus. It takes the Real Value as a percentage of the current salary cap, then projects it forward for each remaining contract year using <strong>projected future caps</strong> and a <strong>5% per year wear-and-tear discount</strong> on signed contract years — reflecting the risk that a team is locked into a guaranteed salary if a player suffers injury or decline. This discount does <em>not</em> apply to the current season or RFA projected years (since no contract has been committed yet). <strong>Player Options</strong> are evaluated: if projected value exceeds option salary, the player declines (marked <span style="color:var(--accent)">PO↗</span>). <strong>Restricted Free Agents</strong> (YOS ≤ 4 at contract end with positive surplus) get 4 projected years at market salary with 8% raises, at full value (marked <span style="color:var(--accent-gold)">RFA</span>). Hover over Trade Value for the year-by-year breakdown.</p>
+    <p><strong style="color:var(--accent)">Trade Value</strong> measures a player's contract-adjusted worth, starting from the 2025-26 surplus. It takes the Real Value as a percentage of the current salary cap, then projects it forward for each remaining contract year using <strong>projected future caps</strong> and a <strong>5% per year wear-and-tear discount</strong> on signed contract years — reflecting the risk of being locked into a guaranteed salary. <strong>Player Options</strong>: if projected value exceeds option salary, the player declines (<span style="color:var(--accent)">PO↗</span>). <strong>Team Options</strong>: if option salary exceeds projected value, the team declines (<span style="color:var(--surplus-neg)">TO✗</span>). <strong>Restricted Free Agents</strong> (YOS ≤ 4 at contract end with positive surplus) get 3 projected years at market salary with 8% raises, at full value with no wear-and-tear (<span style="color:var(--accent-gold)">RFA</span>). The league-wide sum of all Trade Values is normalized to $0.</p>
     <div class="formula-block">
       <span class="step-label">Step 1</span>&nbsp; Watermark = Σ(weight × games × corrected RAT/g) ÷ Σ(weight × games) — time-decay per season<br>
       <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × (1 + (min(1.4, (exp/act)^0.8) − 1) × ageFade) &nbsp;|&nbsp; ageFade = e<sup>-0.12(age-28)</sup> if age &gt; 28, else 1.0<br>
@@ -233,7 +233,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.1 — Data fetched live from Google Sheets</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.3 — Data fetched live from Google Sheets</div>
 
 <script>
 const SHEET_ID = '2PACX-1vSg6im6IYB6HXMGzQbmmBnLw9SfQLzxCSo8OfChxlJLhsB6BBCO0wPF_TMch0YgAbtFqYkwDWrsxRe7';
@@ -565,6 +565,7 @@ function processData(rows, contractRows) {
     p.contractTV = 0;
     p.rfaYears = [];
     p.poDeclined = false;
+    p.toDeclined = false;
 
     if (!c || p.uncappedTV <= 0) continue;
 
@@ -576,14 +577,14 @@ function processData(rows, contractRows) {
     let tvSum = surplus26;
     p.contractYears.push({ year: 2026, salary: p.salary, projVal: p.uncappedTV, surplus: surplus26, status: 'CURRENT', wt: 1.0 });
 
-    // Step 2: Future contract years (2027+) with PO detection and wear-and-tear
+    // Step 2: Future contract years (2027+) with PO/TO detection and wear-and-tear
     let effectiveEnd = c.end;
     for (const yr of c.yrs) {
       if (yr.year < 2027) continue;
       const projCap = CAP_PROJ[yr.year];
       if (!projCap) continue;
       const yearsOut = yr.year - 2026;
-      const wtFactor = Math.pow(1 - WEAR_TEAR, yearsOut); // 0.95^1, 0.95^2, etc.
+      const wtFactor = Math.pow(1 - WEAR_TEAR, yearsOut);
       const projVal = Math.round(capPct * projCap * wtFactor);
 
       // Player Option: if projected value > option salary, player opts out
@@ -593,12 +594,19 @@ function processData(rows, contractRows) {
         break;
       }
 
+      // Team Option: if option salary > projected value, team declines
+      if (yr.status.includes('TEAM OPT') && yr.salary > projVal) {
+        p.toDeclined = true;
+        effectiveEnd = yr.year - 1;
+        break;
+      }
+
       const surp = projVal - yr.salary;
       tvSum += surp;
       p.contractYears.push({ year: yr.year, salary: yr.salary, projVal, surplus: Math.round(surp), status: yr.status, wt: Math.round(wtFactor * 1000) / 1000 });
     }
 
-    // Step 3: RFA projection — NO wear-and-tear (no contract signed yet = no risk)
+    // Step 3: RFA projection (3 years) — NO wear-and-tear (no contract signed yet = no risk)
     const yosAtEnd = c.yos + (effectiveEnd - 2025);
     const isRFA = yosAtEnd <= 4 && surplus26 > 0;
     if (isRFA) {
@@ -608,7 +616,7 @@ function processData(rows, contractRows) {
       const startCap = CAP_PROJ[rfaStartYear];
       if (startCap) {
         let newSal = Math.round(Math.min(capPct, maxPct) * startCap);
-        for (let y = 0; y < 4; y++) {
+        for (let y = 0; y < 3; y++) {
           const yr = rfaStartYear + y;
           const projCap = CAP_PROJ[yr];
           if (!projCap) break;
@@ -622,6 +630,24 @@ function processData(rows, contractRows) {
     }
 
     p.contractTV = Math.round(tvSum);
+  }
+
+  // Normalize Trade Values so the league-wide sum = $0
+  // Distribute the offset proportionally by |TV| so big values absorb more
+  const rawTVTotal = roster.reduce((s, p) => s + p.contractTV, 0);
+  if (Math.abs(rawTVTotal) > 0) {
+    const totalAbsTV = roster.reduce((s, p) => s + Math.abs(p.contractTV), 0);
+    if (totalAbsTV > 0) {
+      for (const p of roster) {
+        p.contractTV = Math.round(p.contractTV - rawTVTotal * (Math.abs(p.contractTV) / totalAbsTV));
+      }
+      // Fix rounding residual on largest absolute TV player
+      const finalSum = roster.reduce((s, p) => s + p.contractTV, 0);
+      if (finalSum !== 0) {
+        const maxP = roster.reduce((a, b) => Math.abs(a.contractTV) > Math.abs(b.contractTV) ? a : b);
+        maxP.contractTV -= finalSum;
+      }
+    }
   }
   // Pool = sum of capped real values
   const cappedPool = roster.reduce((s,p) => s + p.tradeValue, 0);
@@ -738,8 +764,8 @@ function renderTable(players) {
       <td class="col-num col-real-value">${fmtFull$(p.tradeValue)}${s ? deltaHTML(p.uncappedTV, s.tv, false) : ''}</td>
       <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text-secondary)'}">${p.category}</td>
       <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span>${s ? deltaHTML(p.surplus, s.surplus, false) : ''}</div></td>
-      <td class="col-num wm-detail ${p.contractTV>0?'surplus-pos':p.contractTV<0?'surplus-neg':''}"><span style="font-weight:700">${p.contractTV!==0 ? ((p.contractTV>0?'+':'')+fmt$(p.contractTV)) : '—'}</span>${(p.contractYears.length || p.rfaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
-      <td class="col-num" style="font-size:0.75rem;color:var(--text-muted)">${p.contractEnd >= 2027 ? p.contractEnd : 'EXP'}${p.rfaYears.length ? ' <span style="color:var(--accent-gold)">RFA</span>' : ''}${p.poDeclined ? ' <span style="color:var(--accent)">PO↗</span>' : ''}</td>
+      <td class="col-num wm-detail ${p.contractTV>0?'surplus-pos':p.contractTV<0?'surplus-neg':''}"><span style="font-weight:700">${p.contractTV!==0 ? ((p.contractTV>0?'+':'')+fmt$(p.contractTV)) : '—'}</span>${(p.contractYears.length || p.rfaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
+      <td class="col-num" style="font-size:0.75rem;color:var(--text-muted)">${p.contractEnd >= 2027 ? p.contractEnd : 'EXP'}${p.rfaYears.length ? ' <span style="color:var(--accent-gold)">RFA</span>' : ''}${p.poDeclined ? ' <span style="color:var(--accent)">PO↗</span>' : ''}${p.toDeclined ? ' <span style="color:var(--surplus-neg)">TO✗</span>' : ''}</td>
     </tr>`;
   }).join('');
 }
