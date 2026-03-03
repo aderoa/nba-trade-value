@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.6-DEF</span>
+      <span class="tag">v2.6.1-DEF</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -233,7 +233,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.6-DEF — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.6.1-DEF — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -963,7 +963,7 @@ function clearSnapshot() {
 }
 
 async function refreshData() {
-  console.log('=== Real Value v2.6-DEF — refreshData starting ===');
+  console.log('=== Real Value v2.6.1-DEF — refreshData starting ===');
   const btn = document.getElementById('refreshBtn');
   btn.textContent = '⏳ Loading...';
   btn.disabled = true;
@@ -981,17 +981,28 @@ async function refreshData() {
     let defData = null;
     try {
       btn.textContent = '⏳ Defense...';
+      
+      // Log the first URL we'll try, so we can test it manually
+      const testURL = defTabURL(DEF_TABS.trad);
+      console.log('DEF: Starting defensive fetch...');
+      console.log('DEF: Test URL =', testURL);
+      console.log('DEF: Tabs to fetch:', Object.values(DEF_TABS));
+      
       async function fetchDefTab(tab, retries = 3) {
+        const url = defTabURL(tab);
         for (let attempt = 0; attempt < retries; attempt++) {
-          const r = await fetch(defTabURL(tab));
+          console.log(`DEF: Fetching "${tab}" attempt ${attempt+1}...`);
+          const r = await fetch(url);
+          console.log(`DEF: "${tab}" → HTTP ${r.status}`);
           if (r.ok) return r.json();
           if (r.status === 429) {
             await new Promise(res => setTimeout(res, (attempt+1)*2000));
             continue;
           }
-          throw new Error(`HTTP ${r.status} for ${tab}`);
+          const body = await r.text().catch(() => '');
+          throw new Error(`HTTP ${r.status} for "${tab}": ${body.slice(0,200)}`);
         }
-        throw new Error(`Retries exhausted for ${tab}`);
+        throw new Error(`Retries exhausted for "${tab}"`);
       }
 
       const tabKeys = Object.keys(DEF_TABS);
@@ -1003,7 +1014,7 @@ async function refreshData() {
           tabResults[tabKeys[i]] = await fetchDefTab(tabName);
           console.log(`  ✓ ${tabName}: ${tabResults[tabKeys[i]].values?.length || 0} rows`);
         } catch (tabErr) {
-          console.error(`  ✗ ${tabName} FAILED:`, tabErr.message);
+          console.log(`  ✗ ${tabName} FAILED:`, tabErr.message);
           throw tabErr;
         }
         if (i < tabKeys.length - 1) await new Promise(r => setTimeout(r, 400));
@@ -1032,9 +1043,9 @@ async function refreshData() {
       const sampleNames = Object.keys(histScores).slice(0,3);
       for (const n of sampleNames) console.log(`  ${n}: ${histScores[n].map(h => h.year+'='+h.score).join(', ')}`);
     } catch (defErr) {
-      console.error('❌ Defensive data fetch FAILED:', defErr.message);
-      console.error('Stack:', defErr.stack);
-      console.error('Check: Is Season Stats sheet shared publicly? API key valid for sheet ID:', STATS_SHEET_ID);
+      console.log('❌ DEF FETCH FAILED:', defErr.message);
+      console.log('DEF Stack:', defErr.stack);
+      console.log('DEF: Is Season Stats sheet shared? Sheet ID:', STATS_SHEET_ID);
       // Continue without defense — formula falls back to pure offensive
     }
 
