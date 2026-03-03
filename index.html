@@ -507,6 +507,7 @@ function parseDefHistory(histSheet) {
 
 function processData(rows, contractRows, defData) {
   // defData = { liveScores: {playerName: defScore}, histScores: {playerName: [{year, score, gp}]} }
+  console.log('processData called, defData:', defData ? `live=${Object.keys(defData.liveScores).length}, hist=${Object.keys(defData.histScores).length}` : 'NULL');
   const dataRows = rows.slice(1);
   const roster = [], historical = [];
   let todayStr = null;
@@ -717,6 +718,13 @@ function processData(rows, contractRows, defData) {
   const totalAdjDefWM = roster.reduce((s,p) => s + softScore(p.defWatermark), 0);
   const totalAdjDef365 = roster.reduce((s,p) => s + softScore(p.def365), 0);
   const hasDefense = totalAdjDefWM > 0 || totalAdjDef365 > 0;
+  console.log(`=== DEFENSE BLEND: hasDefense=${hasDefense}, totalAdjDefWM=${totalAdjDefWM.toFixed(1)}, totalAdjDef365=${totalAdjDef365.toFixed(1)}, seasonProgress=${seasonProgress.toFixed(2)} ===`);
+  
+  // Log sample players' defensive data
+  const samplePlayers = roster.slice(0, 5);
+  for (const p of samplePlayers) {
+    console.log(`  ${p.player}: defWM=${p.defWatermark.toFixed(1)}, def365=${p.def365.toFixed(1)}`);
+  }
 
   for (const p of roster) {
     // Offensive TV (internal 85/15 WM/RAT blend)
@@ -994,6 +1002,13 @@ async function refreshData() {
 
       const sheets = {};
       for (const k of tabKeys) sheets[k] = parseDefSheet(tabResults[k]);
+      
+      console.log('=== DEFENSIVE DATA DEBUG ===');
+      for (const k of tabKeys) {
+        const s = sheets[k];
+        console.log(`  ${k}: ${s.headers.length} headers, ${s.rows.length} rows`, s.headers.slice(0,5));
+      }
+      if (sheets.defHist.rows[0]) console.log('  defHist row 0:', JSON.stringify(sheets.defHist.rows[0]));
 
       // Compute live 2025-26 defensive scores
       const liveScores = computeLiveDefScores(sheets.trad, sheets.adv, sheets.hustle, sheets.defTrk, sheets.teamAdv);
@@ -1002,16 +1017,24 @@ async function refreshData() {
       const histScores = parseDefHistory(sheets.defHist);
 
       defData = { liveScores, histScores };
-      console.log(`Defense loaded: ${Object.keys(liveScores).length} live scores, ${Object.keys(histScores).length} players with history`);
+      console.log(`Defense loaded: ${Object.keys(liveScores).length} live, ${Object.keys(histScores).length} history players`);
+      
+      // Show sample watermark data
+      const sampleNames = Object.keys(histScores).slice(0,3);
+      for (const n of sampleNames) console.log(`  ${n}: ${histScores[n].map(h => h.year+'='+h.score).join(', ')}`);
     } catch (defErr) {
-      console.warn('Defensive data fetch failed (non-fatal):', defErr.message);
+      console.error('Defensive data fetch failed (non-fatal):', defErr.message, defErr.stack);
       // Continue without defense — formula falls back to pure offensive
     }
 
     appData = processData(ratingsRows, contractRows, defData);
     buildStats(appData);
     update();
+    
+    // Show defense status
+    const defStatus = defData ? `🛡️ DEF: ${Object.keys(defData.liveScores).length} live / ${Object.keys(defData.histScores).length} hist` : '⚠️ No defense';
     btn.textContent = '✅ Updated';
+    console.log(defStatus);
     setTimeout(() => { btn.textContent = '🔄 Refresh'; }, 1500);
   } catch(err) {
     console.error('Refresh error:', err);
