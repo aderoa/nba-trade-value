@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NBA Defensive Rankings — Hoopsmatic</title>
+<title>NBA Real Value Rankings — Hoopsmatic</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -22,9 +22,6 @@
     --surplus-pos: #10b981;
     --surplus-neg: #ef4444;
     --surplus-neutral: #6b7280;
-    --interior: #e06040;
-    --perimeter: #40a0e0;
-    --mix: #a070d0;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: var(--bg-primary); color: var(--text-primary); font-family: 'Source Sans 3', sans-serif; min-height: 100vh; line-height: 1.5; }
@@ -51,208 +48,264 @@
   .search-box .icon { position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem; }
   .filter-group { display: flex; gap: 0.5rem; align-items: center; }
   .filter-group label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-  .filter-group select { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 2rem 0.55rem 0.75rem; color: var(--text-primary); font-family: 'Source Sans 3', sans-serif; font-size: 0.85rem; cursor: pointer; outline: none; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238892a6'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.7rem center; }
+  select { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.85rem; color: var(--text-primary); font-family: 'Source Sans 3', sans-serif; font-size: 0.85rem; outline: none; cursor: pointer; }
+  select:focus { border-color: var(--accent-blue); }
 
-  .table-wrap { max-width: 1400px; margin: 1.5rem auto 3rem; padding: 0 2rem; overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  thead th { position: sticky; top: 0; background: var(--bg-secondary); border-bottom: 2px solid var(--accent-gold); padding: 0.6rem 0.5rem; text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); cursor: pointer; white-space: nowrap; user-select: none; }
-  thead th:hover { color: var(--accent-gold); }
-  thead th.sorted-asc::after { content: ' ▲'; color: var(--accent-gold); }
-  thead th.sorted-desc::after { content: ' ▼'; color: var(--accent-gold); }
+  .table-container { max-width: 1400px; margin: 1.25rem auto 3rem; padding: 0 2rem; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  thead th { position: sticky; top: 0; z-index: 10; background: var(--bg-secondary); font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
   tbody tr { border-bottom: 1px solid rgba(30,45,74,0.5); transition: background 0.15s; }
   tbody tr:hover { background: var(--bg-row-hover); }
-  td { padding: 0.55rem 0.5rem; white-space: nowrap; }
-  td.rank { font-family: 'Oswald', sans-serif; font-weight: 600; color: var(--text-muted); min-width: 36px; text-align: center; }
-  td.rank.top5 { color: var(--accent-gold); }
-  td.rank.top15 { color: var(--accent-cyan); }
-  td.player { font-weight: 600; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
-  td.team { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-secondary); }
-  td.score { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 1rem; }
-  td.archetype { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; }
-  td.archetype.interior { color: var(--interior); }
-  td.archetype.perimeter { color: var(--perimeter); }
-  td.archetype.mix { color: var(--mix); }
-  td.num { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--text-secondary); text-align: right; }
-  td.num.good { color: var(--surplus-pos); }
-  td.num.bad { color: var(--surplus-neg); }
-  td.anchor { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; text-align: right; }
-  td.anchor.pos { color: var(--surplus-pos); }
-  td.anchor.zero { color: var(--text-muted); }
+  tbody td { padding: 0.7rem 1rem; vertical-align: middle; white-space: nowrap; }
 
-  .score-bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--accent-blue); margin-left: 6px; vertical-align: middle; transition: width 0.3s; }
+  .col-rank { width: 55px; text-align: center; font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 0.95rem; }
+  .rank-top5 { color: var(--accent-gold); }
+  .rank-top20 { color: var(--accent-blue); }
+  .rank-top50 { color: var(--accent-cyan); }
+  .col-player { min-width: 200px; }
+  .player-name { font-weight: 600; font-size: 0.92rem; }
+  .player-team { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.05rem; }
+  .col-num { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; }
+  .col-rat { font-weight: 600; }
+  .rat-elite { color: var(--accent-gold); }
+  .rat-star { color: var(--accent-blue); }
+  .rat-solid { color: var(--accent-cyan); }
+  .rat-avg { color: var(--text-primary); }
+  .rat-low { color: var(--text-muted); }
+  .col-real-value { font-weight: 700; font-size: 0.85rem; }
+  .surplus-pos { color: var(--surplus-pos); }
+  .surplus-neg { color: var(--surplus-neg); }
+  .surplus-neutral { color: var(--surplus-neutral); }
 
-  .loading { text-align: center; padding: 4rem 2rem; color: var(--text-secondary); }
-  .loading .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .surplus-cell { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; }
+  .surplus-bar-track { width: 80px; height: 6px; background: rgba(255,255,255,0.04); border-radius: 3px; position: relative; overflow: hidden; }
+  .surplus-bar { position: absolute; top: 0; height: 100%; border-radius: 3px; }
+  .surplus-bar.positive { left: 50%; background: var(--surplus-pos); }
+  .surplus-bar.negative { right: 50%; background: var(--surplus-neg); }
+  .surplus-bar-center { position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px; background: rgba(255,255,255,0.15); }
 
-  .error { text-align: left; padding: 3rem 2rem; color: var(--surplus-neg); max-width: 1400px; margin: 0 auto; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; line-height: 1.8; }
+  .wm-detail { position: relative; cursor: help; }
+  .wm-detail .wm-tooltip { display: none; position: absolute; right: 0; top: 100%; margin-top: 4px; background: #1a2540; border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.85rem; z-index: 20; white-space: nowrap; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.7; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  .wm-detail:hover .wm-tooltip { display: block; }
+  .wm-tooltip .tt-label { color: var(--text-muted); }
+  .wm-tooltip .tt-val { color: var(--text-primary); font-weight: 500; }
 
   .methodology { max-width: 1400px; margin: 0 auto 3rem; padding: 0 2rem; }
-  .methodology details { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; }
-  .methodology summary { padding: 1rem 1.25rem; cursor: pointer; font-family: 'Oswald', sans-serif; font-size: 1.1rem; letter-spacing: 0.03em; color: var(--text-secondary); }
-  .methodology summary:hover { color: var(--text-primary); }
-  .methodology .content { padding: 0 1.25rem 1.25rem; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.7; }
-  .methodology .content h4 { color: var(--accent-gold); font-family: 'Oswald', sans-serif; margin: 1rem 0 0.4rem; font-size: 0.95rem; letter-spacing: 0.04em; }
-  .methodology .content code { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; background: rgba(59,130,246,0.1); padding: 0.15em 0.4em; border-radius: 3px; }
+  .method-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1.75rem 2rem; }
+  .method-card h3 { font-family: 'Oswald', sans-serif; font-size: 1.05rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 0.75rem; }
+  .method-card p { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.65; max-width: 960px; }
+  .method-card p + p { margin-top: 0.6rem; }
+  .method-card code { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--accent-cyan); background: rgba(34,211,238,0.08); padding: 0.15em 0.4em; border-radius: 3px; }
+  .formula-block { background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.25rem; margin-top: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--accent-cyan); line-height: 1.8; }
+  .formula-block .step-label { color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; }
 
-  .tooltip { position: fixed; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1.1rem; font-size: 0.78rem; color: var(--text-secondary); max-width: 320px; z-index: 100; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: none; line-height: 1.6; }
-  .tooltip .tp-name { font-family: 'Oswald', sans-serif; font-size: 1rem; color: var(--text-primary); margin-bottom: 0.4rem; }
-  .tooltip .tp-row { display: flex; justify-content: space-between; gap: 1.5rem; }
-  .tooltip .tp-label { color: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; text-transform: uppercase; }
-  .tooltip .tp-val { font-family: 'JetBrains Mono', monospace; color: var(--text-primary); }
+  .loading-overlay { max-width: 1400px; margin: 4rem auto; padding: 0 2rem; text-align: center; }
+  .loading-overlay .spinner { display: inline-block; width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-overlay p { color: var(--text-secondary); font-size: 0.9rem; }
+  .error-msg { color: var(--surplus-neg); max-width: 600px; margin: 0 auto; text-align: center; }
 
-  @media (max-width: 900px) {
-    .stats-bar { grid-template-columns: repeat(2,1fr); }
-    .controls { flex-direction: column; }
-    .header-brand h1 { font-size: 1.5rem; }
-  }
-  @media (max-width: 600px) {
-    .stats-bar { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-    .table-wrap { padding: 0 0.5rem; }
-    td, th { padding: 0.4rem 0.3rem; }
-  }
+  .footer { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 2.5rem; text-align: center; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid var(--border); }
+
+  @media (max-width: 900px) { .stats-bar { grid-template-columns: repeat(2,1fr); } .controls { flex-direction: column; } .search-box { min-width: 100%; } }
+  @media (max-width: 600px) { .stats-bar { grid-template-columns: 1fr 1fr; gap: 0.5rem; } .stat-card { padding: 0.85rem 1rem; } .stat-card .value { font-size: 1.2rem; } .header { padding: 1.5rem 1rem 1.25rem; } .header-brand h1 { font-size: 1.4rem; } .table-container { padding: 0 0.5rem; } .surplus-bar-track { display: none; } td, th { padding: 0.5rem 0.6rem; } }
+  tbody tr { animation: fadeInRow 0.25s ease both; }
+  @keyframes fadeInRow { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .ctrl-btn { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 1rem; color: var(--text-primary); font-family: 'Source Sans 3', sans-serif; font-size: 0.82rem; cursor: pointer; transition: border-color 0.2s, background 0.2s; white-space: nowrap; }
+  .ctrl-btn:hover:not(:disabled) { border-color: var(--accent-blue); background: rgba(59,130,246,0.08); }
+  .ctrl-btn:disabled { opacity: 0.4; cursor: default; }
+  .ctrl-btn.active { border-color: var(--accent-gold); background: rgba(240,182,55,0.1); }
+  .snap-banner { max-width: 1400px; margin: 0.75rem auto 0; padding: 0 2rem; }
+  .snap-banner-inner { background: rgba(240,182,55,0.08); border: 1px solid rgba(240,182,55,0.25); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--accent-gold); display: flex; align-items: center; gap: 0.5rem; }
+  .delta { font-size: 0.68rem; font-family: 'JetBrains Mono', monospace; margin-left: 4px; }
+  .delta-up { color: var(--surplus-pos); }
+  .delta-down { color: var(--surplus-neg); }
+  .delta-flat { color: var(--text-muted); }
 </style>
 </head>
 <body>
+
 <div class="header">
   <div class="header-inner">
     <div class="header-brand">
-      <h1>🛡️ Defensive Rankings</h1>
-      <span class="tag">v4.1 — Real Anchor</span>
+      <h1>NBA Real Value Rankings</h1>
+      <span class="tag">v2.9-DEF</span>
     </div>
-    <div class="header-subtitle">Archetype-weighted composite score with team defense anchor bonus</div>
+    <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
 </div>
 
 <div class="stats-bar" id="statsBar">
-  <div class="stat-card"><div class="label">Players Ranked</div><div class="value" id="statPlayers">—</div></div>
-  <div class="stat-card"><div class="label">#1 Defender</div><div class="value" id="statTop">—</div></div>
-  <div class="stat-card"><div class="label">Top Score</div><div class="value" id="statScore">—</div></div>
-  <div class="stat-card"><div class="label">Last Updated</div><div class="value" id="statDate">—</div></div>
+  <div class="stat-card"><div class="label">Loading...</div><div class="value">—</div></div>
+  <div class="stat-card"><div class="label">Loading...</div><div class="value">—</div></div>
+  <div class="stat-card"><div class="label">Loading...</div><div class="value">—</div></div>
+  <div class="stat-card"><div class="label">Loading...</div><div class="value">—</div></div>
 </div>
 
 <div class="controls">
   <div class="search-box">
     <span class="icon">🔍</span>
-    <input type="text" id="search" placeholder="Search player or team…" oninput="update()">
+    <input type="text" id="searchInput" placeholder="Search player or team..." disabled>
   </div>
   <div class="filter-group">
     <label>Team</label>
-    <select id="teamFilter" onchange="update()"><option value="">All Teams</option></select>
+    <select id="teamFilter" disabled><option value="">All Teams</option></select>
   </div>
   <div class="filter-group">
-    <label>Min GP</label>
-    <select id="gpFilter" onchange="update()">
-      <option value="40">40+</option>
-      <option value="30">30+</option>
-      <option value="20">20+</option>
-      <option value="50">50+</option>
-      <option value="0">All Players</option>
+    <label>Sort</label>
+    <select id="sortSelect" disabled>
+      <option value="uncappedTV-desc">Real Value ↓</option>
+      <option value="uncappedTV-asc">Real Value ↑</option>
+      <option value="contractTV-desc">Trade Value ↓</option>
+      <option value="contractTV-asc">Trade Value ↑</option>
+      <option value="surplus-desc">Surplus ↓</option>
+      <option value="surplus-asc">Surplus ↑</option>
+      <option value="watermark-desc">Watermark ↓</option>
+      <option value="watermark-asc">Watermark ↑</option>
+      <option value="rat365-desc">RAT 365 ↓</option>
+      <option value="rat365-asc">RAT 365 ↑</option>
+      <option value="salary-desc">Salary ↓</option>
+      <option value="salary-asc">Salary ↑</option>
+      <option value="age-asc">Age ↑ (youngest)</option>
+      <option value="age-desc">Age ↓ (oldest)</option>
     </select>
   </div>
-  <button id="refreshBtn" onclick="refreshData()" style="background:var(--accent-blue);color:#fff;border:none;border-radius:6px;padding:0.55rem 1.2rem;font-family:'Source Sans 3',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;">↻ Refresh</button>
+  <div class="filter-group" style="margin-left:auto;">
+    <button id="snapshotBtn" class="ctrl-btn" disabled>📸 Snapshot</button>
+    <button id="refreshBtn" class="ctrl-btn" disabled>🔄 Refresh</button>
+    <button id="clearSnapBtn" class="ctrl-btn" style="display:none">✕ Clear</button>
+  </div>
 </div>
 
-<div class="table-wrap">
-  <div class="loading" id="loading"><div class="spinner"></div><br>Fetching defensive stats from Google Sheets…</div>
-  <div class="error" id="error" style="display:none"></div>
-  <table id="mainTable" style="display:none">
+<div class="snap-banner" id="snapBanner" style="display:none">
+  <div class="snap-banner-inner">📸 Snapshot locked — update your sheet, then hit <strong>Refresh</strong> to see changes</div>
+</div>
+
+<div id="loadingArea">
+  <div class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Fetching live data from Google Sheets...</p>
+  </div>
+</div>
+
+<div class="table-container" style="display:none" id="tableContainer">
+  <table>
     <thead>
       <tr>
-        <th data-col="rank">#</th>
-        <th data-col="player">Player</th>
-        <th data-col="team">Team</th>
-        <th data-col="score">Score</th>
-        <th data-col="stl">STL/G</th>
-        <th data-col="blk">BLK/G</th>
-        <th data-col="defl">DEFL/G</th>
-        <th data-col="contest">CONT/G</th>
-        <th data-col="dfgpct">OPP FG%</th>
-        <th data-col="dfgdiff">DIFF%</th>
-        <th data-col="drtg">DEF RTG</th>
-        <th data-col="gp">GP</th>
-        <th data-col="mpg">MPG</th>
-        <th data-col="spm">SC/MPG</th>
+        <th class="col-rank">#</th>
+        <th>Player</th>
+        <th style="text-align:right">Age</th>
+        <th style="text-align:right">RAT 365</th>
+        <th style="text-align:right">Watermark</th>
+        <th style="text-align:right">Salary</th>
+        <th style="text-align:right">Real Value</th>
+        <th style="text-align:center">Category</th>
+        <th style="text-align:right">Surplus</th>
+        <th style="text-align:right">Trade Value</th>
+        <th style="text-align:center">End</th>
       </tr>
     </thead>
-    <tbody id="tbody"></tbody>
+    <tbody id="tableBody"></tbody>
   </table>
 </div>
 
 <div class="methodology">
-  <details>
-    <summary>Methodology — How the Defensive Score Works</summary>
-    <div class="content">
-      <h4>Archetype Detection</h4>
-      Players are classified on a perimeter↔interior spectrum using a sigmoid on BLK/G. High-block bigs get interior weights; guards/wings get perimeter weights. This determines which stats matter most for each player.
-
-      <h4>Interior Formula (weights sum to 100)</h4>
-      <code>DEF FG% DIFF (22)</code> · <code>BLK/G (22)</code> · <code>DEF_RATING (14)</code> · <code>NET_RATING (10)</code> · <code>DEF FG% (10)</code> · <code>CONTESTED/G (8)</code> · <code>STL/G (5)</code> · <code>DEFL/G (5)</code> · <code>REB/G (4)</code>
-
-      <h4>Perimeter Formula (weights sum to 100)</h4>
-      <code>STL/G (22)</code> · <code>DEFL/G (16)</code> · <code>DEF FG% DIFF (12)</code> · <code>PF/G (8)</code> · <code>NET_RATING (8)</code> · <code>WIN (8)</code> · <code>CHARGES/G (6)</code> · <code>DEF FG% (6)</code> · <code>DEF_RATING (6)</code> · <code>MPG (4)</code> · <code>LOOSE BALLS/G (4)</code>
-
-      <h4>Anchor Bonus (up to +18 pts)</h4>
-      Players on top-15 defensive teams (by real team DRTG) earn a bonus scaled by: team rank tier (top-5/10/15), minutes share (25–34+ MPG), scheme factor (player DRTG vs team DRTG), and win factor (vs median).
-
-      <h4>Scoring</h4>
-      All stats are z-scored within the current season pool. The final composite uses a fixed linear transform (<code>score = raw × 0.07 + 14.5</code>) so that an average defender scores ~15, elite starters land in the mid-to-high 20s, and DPOY-caliber seasons reach the low-to-mid 30s. Because the scale is fixed (not min-max normalized), scores are comparable across seasons.
+  <div class="method-card">
+    <h3>Methodology</h3>
+    <p>Real values are distributed from a <strong style="color:var(--text-primary)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
+    <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating uses a time-decay weighted average: each game's per-game RAT contributes weighted by its season's recency — 2025-26 at full weight (1.0), then decaying by 0.6× per year back (0.6, 0.36, 0.216, 0.13). Recent performance matters most while still crediting a strong track record. Hover over any Watermark to see the per-season breakdown.</p>
+    <p>The final Real Value is an <strong style="color:var(--text-primary)">85/15 blend</strong>: 85% from the Watermark-based distribution and 15% from the RAT 365-based distribution. Both distributions use a <strong>soft-capped exponent</strong> <code>r^3.2 / (1 + r^3.2/14000)</code>, creating a steep progressive curve that rewards elite production while compressing extreme outliers at the top.</p>
+    <p>A <strong style="color:var(--text-primary)">games-played correction</strong> is applied per-season to compensate for the Global Rating's built-in availability penalty. For each season, the per-game average is adjusted by <code>(expected / actual)^0.8</code>, capped at 1.4× and only for players with ≥40% of expected games. However, this correction <strong style="color:var(--text-primary)">fades with age</strong>: players over 28 receive progressively less GP correction, reflecting that older players are more likely to suffer recurring or decline-related injuries. The boost portion decays by <code>e^(-0.12 × (age − 28))</code>, so a 35-year-old retains only ~43% of the correction a younger player would get.</p>
+    <p>An <strong style="color:var(--text-primary)">age factor</strong> rewards youth and mildly penalizes age. Players below the league average age (~26.5) receive up to a 2× bonus scaling linearly to the youngest player. Players 35 and older receive a 3% penalty per year over 35 (floor 0.5×). Players between average and 35 are unaffected. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
+    <p>A <strong style="color:var(--accent-gold)">potential bonus</strong> (up to $18M) is added for players under 25, based on their draft position and age. Both factors use exponential decay: earlier draft picks and younger ages receive larger bonuses, with bigger gaps at the top (e.g., the difference between pick 1 and 2 is larger than between picks 59 and 60). Hover over the Age column to see the potential bonus breakdown.</p>
+    <p>The distribution uses a <strong style="color:var(--accent-gold)">soft-capped exponent</strong> — <code>score = r^3.2 / (1 + r^3.2 / 14000)</code> — instead of a plain power curve. For mid-tier players, this behaves like a normal r^3.2 distribution, creating enough separation to push ~32 players above max-contract thresholds. For elite outliers, the denominator grows, compressing the very top so no player exceeds ~$95M. The total always equals the salary pool by construction.</p>
+    <p><strong style="color:var(--accent)">Trade Value</strong> measures a player's contract-adjusted worth, starting from the 2025-26 surplus. It takes the Real Value as a percentage of the current salary cap, then projects it forward for each remaining contract year using <strong>projected future caps</strong> and a <strong>5% per year wear-and-tear discount</strong> on signed contract years — reflecting the risk of being locked into a guaranteed salary. <strong>Player Options</strong>: if projected value exceeds option salary, the player declines (<span style="color:var(--accent)">PO↗</span>). <strong>Team Options</strong>: if option salary exceeds projected value, the team declines (<span style="color:var(--surplus-neg)">TO✗</span>). <strong>Restricted Free Agents</strong> (YOS ≤ 4 at contract end with positive surplus) get 3 projected years at market salary with 8% raises, at full value with no wear-and-tear (<span style="color:var(--accent-gold)">RFA</span>). The league-wide sum of all Trade Values is normalized to $0.</p>
+    <div class="formula-block">
+      <span class="step-label">Step 1</span>&nbsp; Watermark = Σ(weight × games × corrected RAT/g) ÷ Σ(weight × games) — time-decay per season<br>
+      <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × (1 + (min(1.4, (exp/act)^0.8) − 1) × ageFade) &nbsp;|&nbsp; ageFade = e<sup>-0.12(age-28)</sup> if age &gt; 28, else 1.0<br>
+      <span class="step-label">Step 3</span>&nbsp; score(r) = r^3.2 ÷ (1 + r^3.2 / 14000) &nbsp;|&nbsp; TV<sub>WM</sub> = (score(WM) ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (score(RAT365) ÷ Σ) × Pool<br>
+      <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 85% × TV<sub>WM</sub> + 15% × TV<sub>RAT</sub><br>
+      <span class="step-label">Step 5</span>&nbsp; Age factor (youth +100%, 35+ −3%/yr) → normalize to Pool<br>
+      <span class="step-label">Step 6</span>&nbsp; Potential bonus = $18M × e<sup>-0.05(pick-1)</sup> × e<sup>-0.5(age-18.82)</sup> (under 25 only)<br>
+      <span class="step-label">Step 7</span>&nbsp; Trade Value = Surplus<sub>25-26</sub> + Σ<sub>contract years</sub> ((RV ÷ Cap<sub>cur</sub>) × Cap<sub>proj</sub> × 0.95<sup>years out</sup> − Salary) + Σ<sub>RFA years</sub> (full projected − salary)
     </div>
-  </details>
+  </div>
 </div>
 
-<div class="tooltip" id="tooltip"></div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.9-DEF — Live data via Google Sheets API</div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-// GOOGLE SHEETS CONFIG
-// ═══════════════════════════════════════════════════════
-const STATS_ID = '1JH2FUBIyQ1zEHzZBxgP8vHBZ7d8EtP5-fSVG3zMgCgg';
-const API_KEY  = 'AIzaSyB9g7c6llswswuZQ2I5y2MwGk6BzYEtHsY';
-const BASE_URL = `https://sheets.googleapis.com/v4/spreadsheets/${STATS_ID}/values`;
-const makeURL  = tab => `${BASE_URL}/${encodeURIComponent(tab)}?key=${API_KEY}`;
+const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
+const API_KEY = 'AIzaSyB9g7c6llswswuZQ2I5y2MwGk6BzYEtHsY';
+const RATINGS_TAB = 'Sheet3';
+const CONTRACT_TAB = 'Sheet6';
+const SHEETS_API = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values`;
+const RATINGS_URL = `${SHEETS_API}/${RATINGS_TAB}?key=${API_KEY}`;
+const CONTRACT_URL = `${SHEETS_API}/${CONTRACT_TAB}?key=${API_KEY}`;
 
-const TABS = {
+// ═══ DEFENSIVE DATA SOURCE ═══
+// Season Stats sheet for live defensive computation + history
+const STATS_SHEET_ID = '1JH2FUBIyQ1zEHzZBxgP8vHBZ7d8EtP5-fSVG3zMgCgg';
+const STATS_API = `https://sheets.googleapis.com/v4/spreadsheets/${STATS_SHEET_ID}/values`;
+const DEF_TABS = {
   trad:    'Player Traditional Totals',
   adv:     'Player Advanced',
   hustle:  'Player Hustle',
   defTrk:  'Def_Tracking_Overall',
   teamAdv: 'Team Advanced',
+  defHist: 'Defensive History',
 };
+function defTabURL(tab) { return `${STATS_API}/${encodeURIComponent(tab)}?key=${API_KEY}`; }
 
-// Nomenclature sheet: maps NBA API names → HoopsMatic names
-// Lives in Daily Stats spreadsheet (different from Season Stats)
-const NOMEN_PUB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS2iZj3avZ_-CAWKu-f_pxZkf38M0quXQwMbyTXmHsN6-c9V8vU1l_sNaxg0y8dl07dqraU3_5Z3b8D/pub';
-const NOMEN_GID = '1197809522'; // col L=NBA NAME, col M=HH NAME
-const NOMEN_URL = `${NOMEN_PUB}?gid=${NOMEN_GID}&single=true&output=csv`;
+// Defensive blend weights (mirrors offensive structure)
+const DEF_OVERALL_WEIGHT = 0.25;  // Defensive multiplier strength (how much defense can shift TV)
+const OFF_OVERALL_WEIGHT = 0.85;  // (not used in multiplicative model, kept for reference)
+const DEF_WM_WEIGHT = 0.85;      // Within defense: 85% watermark
+const DEF_365_WEIGHT = 0.15;     // Within defense: 15% def-365
+const EXPONENT = 3.2;
+const KNEE = 14000; // Soft-cap: score = r^EXP / (1 + r^EXP / KNEE)
+const WM_WEIGHT = 0.85;
+const RAT_WEIGHT = 0.15;
+const AGE_MAX_BONUS = 1.0;
+const OLD_THRESHOLD = 35;
+const OLD_PENALTY_PER_YEAR = 0.03;
+const OLD_FLOOR = 0.50;
+const GAMES_BETA = 0.8;
+const GAMES_MAX_MULT = 1.4;
+const GAMES_MIN_PCT = 0.40;
+const GP_AGE_THRESHOLD = 28; // Age at which GP correction starts fading
+const GP_AGE_DECAY = 0.12; // Exponential decay rate per year over threshold
 
-// ═══════════════════════════════════════════════════════
-// COLUMN NAME MAPPING: NBA API → Formula
-// ═══════════════════════════════════════════════════════
-// The Google Sheet uses nba_api column names.
-// Map them to the names used in our defensive formula.
-function mapRow(headers, row) {
-  const obj = {};
-  headers.forEach((h, i) => { obj[h] = row[i] !== undefined ? row[i] : ''; });
-  return obj;
-}
+// Potential bonus for young players based on draft position and age
+const POTENTIAL_MAX = 18000000; // $18M maximum potential bonus
+const MIN_ROOKIE_AGE = 18 + 300/365; // 18 years 300 days (youngest realistic debut age)
+const MAX_POTENTIAL_AGE = 25; // No potential bonus after 25
+const DRAFT_DECAY = 0.05; // Exponential decay rate for draft position
+const AGE_DECAY = 0.5; // Exponential decay rate for age
 
-// ═══════════════════════════════════════════════════════
-// COLUMN AUTO-RESOLVER
-// Handles NBA API naming variants across different endpoints
-// ═══════════════════════════════════════════════════════
-function resolveCol(row, ...candidates) {
-  for (const c of candidates) {
-    if (row[c] !== undefined && row[c] !== '') return row[c];
-  }
-  return '';
-}
+// NBA 2025-26 salary floor (minimums) and ceiling (max) by experience
+const SAL_CAP = 154647000;
+const MIN_SAL = {0:1272870,1:2048494,2:2296274,3:2378870,4:2461463,5:2667947,6:2874436,7:3080921,8:3287409,9:3303774};
+const MIN_SAL_10 = 3634153;
+const MAX_SAL = {0:Math.round(SAL_CAP*0.25),7:Math.round(SAL_CAP*0.30),10:Math.round(SAL_CAP*0.35)};
+const TWO_WAY_SAL = 636435;
+function getMinSal(exp) { if (exp <= 3) return TWO_WAY_SAL; return exp >= 10 ? MIN_SAL_10 : (MIN_SAL[exp] || MIN_SAL[0]); }
+function getMaxSal(exp) { if (exp >= 10) return MAX_SAL[10]; if (exp >= 7) return MAX_SAL[7]; return MAX_SAL[0]; }
 
-function parseNum(v) {
-  if (v === undefined || v === null || v === '') return null;
-  const n = parseFloat(String(v).replace(/,/g, ''));
-  return isNaN(n) ? null : n;
-}
+// Projected salary caps for Trade Value computation
+const CAP_PROJ = {
+  2026: 154647000,  // 2025-26 (current)
+  2027: 166000000,  // 2026-27
+  2028: 174300000,  // 2027-28
+  2029: 183015000,  // 2028-29
+  2030: 192166000,  // 2029-30
+  2031: 201774000,  // 2030-31
+  2032: 211863000,  // 2031-32
+  2033: 222456000,  // 2032-33
+  2034: 233579000,  // 2033-34
+  2035: 245258000,  // 2034-35
+};
 
 function parseCSV(text) {
   const rows = []; let current = '', inQuotes = false, row = [];
@@ -277,602 +330,905 @@ function parseCSV(text) {
   return rows;
 }
 
-function parseSheet(data) {
-  // Sheet layout from nba_season_stats.py:
-  //   A1 (index 0): "Season: 2025-26 | Last Updated: ..."
-  //   A2 (index 1): BLANK ROW
-  //   A3 (index 2): Column headers
-  //   A4+ (index 3+): Data rows
-  // But blank rows may or may not be returned by the API,
-  // so we scan for the header row dynamically.
-  if (!data.values || data.values.length < 2) return { headers: [], rows: [], meta: '' };
-  
-  let meta = '';
+// ═══════════════════════════════════════════════════════
+// DEFENSIVE SCORE COMPUTATION
+// ═══════════════════════════════════════════════════════
+
+// Parse Season Stats sheet (metadata row, possible blank, headers, data)
+function parseDefSheet(data) {
+  if (!data.values || data.values.length < 2) return { headers: [], rows: [] };
   let headerIdx = -1;
-  
-  // Find the header row: first row with 3+ non-empty cells that isn't metadata
   for (let i = 0; i < Math.min(data.values.length, 5); i++) {
     const row = data.values[i];
-    const firstCell = (row[0] || '').trim();
+    const first = (row[0] || '').trim();
+    if (first.toLowerCase().startsWith('season') || first.includes('Updated')) continue;
+    if (row.filter(c => (c || '').trim() !== '').length < 3) continue;
+    headerIdx = i; break;
+  }
+  if (headerIdx < 0) return { headers: [], rows: [] };
+  const headers = data.values[headerIdx].map(h => (h || '').trim());
+  const rows = data.values.slice(headerIdx + 1).map(r => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; });
+    return obj;
+  });
+  return { headers, rows };
+}
+
+function defResolve(row, ...keys) {
+  for (const k of keys) { if (row[k] !== undefined && row[k] !== '') return row[k]; }
+  return '';
+}
+function defNum(v) { if (v === undefined || v === null || v === '') return null; const n = parseFloat(String(v).replace(/,/g,'')); return isNaN(n) ? null : n; }
+
+// Archetype sigmoid
+function perimWeight(blkPg) { return 1.0 / (1.0 + Math.exp(3.0 * (blkPg - 1.0))); }
+
+const DEF_INTERIOR = {
+  'PCT_PLUSMINUS':{w:22,d:-1},'BLK_PG':{w:22,d:1},'DEF_RATING':{w:14,d:-1},
+  'NET_RATING':{w:10,d:1},'D_FG_PCT':{w:10,d:-1},'CONTESTED_SHOTS_PG':{w:8,d:1},
+  'STL_PG':{w:5,d:1},'DEFLECTIONS_PG':{w:5,d:1},'REB_PG':{w:4,d:1},
+};
+const DEF_PERIMETER = {
+  'STL_PG':{w:22,d:1},'DEFLECTIONS_PG':{w:16,d:1},'PF_PG':{w:8,d:1},
+  'CHARGES_DRAWN_PG':{w:6,d:1},'PCT_PLUSMINUS':{w:12,d:-1},'NET_RATING':{w:8,d:1},
+  'W':{w:8,d:1},'D_FG_PCT':{w:6,d:-1},'DEF_RATING':{w:6,d:-1},
+  'MPG':{w:4,d:1},'LOOSE_BALLS_RECOVERED_PG':{w:4,d:1},
+};
+const DEF_ALL_FEATS = new Set([...Object.keys(DEF_INTERIOR), ...Object.keys(DEF_PERIMETER)]);
+
+function computeLiveDefScores(tradSheet, advSheet, hustleSheet, defTrkSheet, teamAdvSheet) {
+  // Build team ID→abbreviation + team defense map
+  const idToAbbr = {};
+  for (const r of tradSheet.rows) {
+    const abbr = defResolve(r,'TEAM_ABBREVIATION','TEAM_ABB').trim();
+    const id = defResolve(r,'TEAM_ID').trim();
+    if (abbr && id) idToAbbr[id] = abbr;
+  }
+  const teamDefMap = {};
+  const tRows = teamAdvSheet.rows.map(r => ({
+    team: idToAbbr[defResolve(r,'TEAM_ID').trim()] || '',
+    drtg: defNum(defResolve(r,'DEF_RATING','DRTG'))
+  })).filter(r => r.team && r.drtg !== null && r.drtg < 999);
+  tRows.sort((a,b) => a.drtg - b.drtg);
+  tRows.forEach((t,i) => { teamDefMap[t.team] = { drtg: t.drtg, rank: i+1 }; });
+
+  // Lookup maps
+  function buildLookup(rows) {
+    const map = {};
+    for (const r of rows) {
+      const n = defResolve(r,'PLAYER_NAME','PLAYER').trim();
+      const t = defResolve(r,'TEAM_ABBREVIATION','TEAM_ABB','PLAYER_LAST_TEAM_ABBREVIATION').trim();
+      if (n) { map[n+'|'+t] = r; if (!map[n]) map[n] = r; }
+    }
+    return map;
+  }
+  function lookup(m, name, team) { return m[name+'|'+team] || m[name] || {}; }
+
+  const advMap = buildLookup(advSheet.rows);
+  const hustleMap = buildLookup(hustleSheet.rows);
+  const defTrkMap = buildLookup(defTrkSheet.rows);
+
+  // Build player array
+  const players = [];
+  for (const r of tradSheet.rows) {
+    const name = defResolve(r,'PLAYER_NAME','PLAYER').trim();
+    const team = defResolve(r,'TEAM_ABBREVIATION','TEAM_ABB').trim();
+    if (!name || !team) continue;
+    const gp = defNum(defResolve(r,'GP')) || 0;
+    const min = defNum(defResolve(r,'MIN')) || 0;
+    const mpg = gp > 0 ? min / gp : 0;
+    if (gp < 1) continue;
+
+    const a = lookup(advMap, name, team);
+    const h = lookup(hustleMap, name, team);
+    const d = lookup(defTrkMap, name, team);
+    const td = teamDefMap[team] || {};
+    const hGP = defNum(defResolve(h,'G','GP')) || gp;
+
+    const p = {
+      name, team, gp, MPG: mpg,
+      STL_PG: gp>0 ? (defNum(defResolve(r,'STL'))||0)/gp : 0,
+      BLK_PG: gp>0 ? (defNum(defResolve(r,'BLK'))||0)/gp : 0,
+      REB_PG: gp>0 ? (defNum(defResolve(r,'REB'))||0)/gp : 0,
+      PF_PG:  gp>0 ? (defNum(defResolve(r,'PF'))||0)/gp : 0,
+      W: defNum(defResolve(r,'W','WIN','WINS')) || 0,
+      DEF_RATING: defNum(defResolve(a,'DEF_RATING','DRTG')),
+      NET_RATING: defNum(defResolve(a,'NET_RATING','NRTG')),
+      DEFLECTIONS_PG:     hGP>0 ? (defNum(defResolve(h,'DEFLECTIONS'))||0)/hGP : 0,
+      CONTESTED_SHOTS_PG: hGP>0 ? (defNum(defResolve(h,'CONTESTED_SHOTS'))||0)/hGP : 0,
+      CHARGES_DRAWN_PG:   hGP>0 ? (defNum(defResolve(h,'CHARGES_DRAWN'))||0)/hGP : 0,
+      LOOSE_BALLS_RECOVERED_PG: hGP>0 ? (defNum(defResolve(h,'LOOSE_BALLS_RECOVERED'))||0)/hGP : 0,
+      D_FG_PCT: defNum(defResolve(d,'D_FG_PCT')),
+      PCT_PLUSMINUS: defNum(defResolve(d,'PCT_PLUSMINUS')),
+      TEAM_DRTG: td.drtg || null, TEAM_RANK: td.rank || null,
+    };
+    p.PERIM_W = perimWeight(p.BLK_PG);
+    if (p.DEF_RATING === null && p.D_FG_PCT === null) continue;
+    players.push(p);
+  }
+  if (players.length === 0) return {};
+
+  // Z-scores
+  const feats = [...DEF_ALL_FEATS];
+  const means = {}, stds = {};
+  for (const f of feats) {
+    const vals = players.map(p => p[f]).filter(v => v !== null && !isNaN(v));
+    const n = vals.length; if (n===0) { means[f]=0; stds[f]=1; continue; }
+    const mean = vals.reduce((a,b)=>a+b,0)/n;
+    means[f] = mean; stds[f] = Math.sqrt(vals.reduce((a,v)=>a+(v-mean)**2,0)/n) || 1;
+  }
+  for (const p of players) {
+    for (const f of feats) p[f+'_z'] = (p[f]!==null && !isNaN(p[f])) ? (p[f]-means[f])/stds[f] : 0;
+  }
+
+  // Composite
+  for (const p of players) {
+    let intS=0; for (const [f,{w,d}] of Object.entries(DEF_INTERIOR)) intS += w*d*(p[f+'_z']||0);
+    let perS=0; for (const [f,{w,d}] of Object.entries(DEF_PERIMETER)) perS += w*d*(p[f+'_z']||0);
+    p.BASE_RAW = p.PERIM_W * perS + (1-p.PERIM_W) * intS;
+  }
+
+  // Anchor bonus
+  const medWins = (() => { const s = players.map(p=>p.W).sort((a,b)=>a-b); const m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; })();
+  for (const p of players) {
+    p.ANCHOR = 0;
+    const rk = p.TEAM_RANK; if (!rk || rk > 15) continue;
+    const tf = rk<=5?1.0:rk<=10?0.5:0.25;
+    const mf = Math.max(0,Math.min(1,(p.MPG-25)/9));
+    let sf=0.5; if (p.TEAM_DRTG && p.DEF_RATING) sf=Math.max(0.15,Math.min(1,0.5+(p.TEAM_DRTG-p.DEF_RATING)/8));
+    const wf = Math.max(0.3,Math.min(1,0.5+(p.W-medWins)/25));
+    p.ANCHOR = 18 * tf * mf * sf * wf;
+  }
+
+  // Organic score
+  for (const p of players) p.DEF_SCORE = Math.max(0, (p.BASE_RAW + p.ANCHOR) * 0.12 + 15);
+
+  // Return map: playerName → score
+  const result = {};
+  for (const p of players) result[p.name] = p.DEF_SCORE;
+  return result;
+}
+
+function parseDefHistory(histSheet) {
+  // Returns { playerName: [{year: '2024-25', score: 28.5, gp: 72}, ...] }
+  const result = {};
+  for (const r of histSheet.rows) {
+    const name = (r.PLAYER || '').trim();
+    const season = (r.SEASON || '').trim();
+    const score = parseFloat(r.DEF_SCORE);
+    const gp = parseInt(r.GP) || 0;
+    if (!name || !season || isNaN(score)) continue;
+    if (!result[name]) result[name] = [];
+    result[name].push({ year: season, score, gp });
+  }
+  return result;
+}
+
+function processData(rows, contractRows, defData) {
+  // defData = { liveScores: {playerName: defScore}, histScores: {playerName: [{year, score, gp}]} }
+  console.log('processData called, defData:', defData ? `live=${Object.keys(defData.liveScores).length}, hist=${Object.keys(defData.histScores).length}` : 'NULL');
+  const dataRows = rows.slice(1);
+  const roster = [], historical = [];
+  let todayStr = null;
+  const shootingMap = {};
+  const expMap = {};
+
+  for (const row of dataRows) {
+    while (row.length < 21) row.push('');
+    // Grab today's date from col S (index 18)
+    if (row[18] && !todayStr) todayStr = row[18];
+    if (row[0] && row[1]) {
+      const draftPick = parseInt(row[20]) || null; // Column U = draft position
+      roster.push({ team: row[0], player: row[1], rat365: parseFloat(row[2]) || 0, salary: parseInt(row[3].replace(/[$,]/g,'')) || 0, birthday: row[4] || '', draftPick: draftPick });
+      // EXP column (index 19)
+      if (row[19]) { const ev = parseInt(row[19]); if (!isNaN(ev)) expMap[row[1].trim()] = ev; }
+    }
+    if (row[6] && row[7]) {
+      const g = parseInt(row[9]) || 0;
+      if (g > 0) historical.push({ year: row[6], player: row[7], totalRat: parseFloat(row[8].replace(/,/g,'')) || 0, games: g });
+    }
+    // Shooting penalty (col 12=player, col 17=shooting, 2025-26 block)
+    if (row[12] && row[17]) {
+      const sv = parseFloat(row[17]);
+      if (!isNaN(sv) && sv > 0) shootingMap[row[12].trim()] = sv;
+    }
+  }
+
+  const playerHist = {};
+  for (const h of historical) { const k = h.player.toLowerCase(); if (!playerHist[k]) playerHist[k] = []; playerHist[k].push(h); }
+
+  const totalSalaryPool = roster.reduce((s,p) => s + p.salary, 0);
+
+  // Parse ages early so GP correction can use them
+  function parseDate(s) {
+    if (!s) return null;
+    const parts = s.split('/');
+    if (parts.length === 3) return new Date(+parts[2], +parts[0]-1, +parts[1]);
+    return null;
+  }
+  const today = parseDate(todayStr) || new Date();
+  const ages = [];
+  for (const p of roster) {
+    const bd = parseDate(p.birthday);
+    if (bd) {
+      p.age = (today - bd) / (365.25 * 24 * 60 * 60 * 1000);
+      ages.push(p.age);
+    } else {
+      p.age = null;
+    }
+  }
+  const avgAge = ages.length > 0 ? ages.reduce((a,b) => a+b, 0) / ages.length : 26;
+  const maxDevYoung = avgAge - Math.min(...ages);
+
+  // GP correction helper — fades the boost for players over GP_AGE_THRESHOLD
+  function gpCorr(rawPerGame, expected, actual, playerAge) {
+    const pct = actual / expected;
+    if (pct < GAMES_MIN_PCT) return rawPerGame;
+    const rawMult = Math.min(GAMES_MAX_MULT, Math.pow(expected / actual, GAMES_BETA));
+    if (playerAge !== null && playerAge > GP_AGE_THRESHOLD) {
+      // Decay the boost portion (amount above 1.0) by age
+      const fade = Math.exp(-GP_AGE_DECAY * (playerAge - GP_AGE_THRESHOLD));
+      const boost = (rawMult - 1.0) * fade;
+      return rawPerGame * (1.0 + boost);
+    }
+    return rawPerGame * rawMult;
+  }
+
+  const SEASON_WEIGHT = {'2025-26':1.0,'2024-25':0.6,'2023-24':0.36,'2022-23':0.216,'2021-22':0.1296};
+  const CUR_YEAR = '2025-26';
+  const EXPECTED = {'2021-22':82,'2022-23':82,'2023-24':82,'2024-25':82,'2025-26':48};
+
+  for (const p of roster) {
+    const hist = playerHist[p.player.toLowerCase()] || [];
+    let num = 0, den = 0;
+    for (const h of hist) {
+      const w = SEASON_WEIGHT[h.year] || 0;
+      if (w <= 0 || h.games <= 0) continue;
+      let perGame = h.totalRat / h.games;
+      // Per-season games correction with age fade
+      const exp = EXPECTED[h.year] || 82;
+      perGame = gpCorr(perGame, exp, h.games, p.age);
+      num += perGame * w * h.games;
+      den += w * h.games;
+    }
+    p.watermark = den > 0 ? num / den : 0;
+
+    const cur = hist.filter(h => h.year === CUR_YEAR);
+    p.curGames = cur.reduce((s,h) => s+h.games, 0);
+    p.expGames = EXPECTED[CUR_YEAR];
+    if (p.curGames > 0 && (p.curGames/p.expGames) >= GAMES_MIN_PCT) {
+      const rawMult = Math.min(GAMES_MAX_MULT, Math.pow(p.expGames/p.curGames, GAMES_BETA));
+      if (p.age !== null && p.age > GP_AGE_THRESHOLD) {
+        const fade = Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD));
+        p.gamesCorr = 1.0 + (rawMult - 1.0) * fade;
+      } else {
+        p.gamesCorr = rawMult;
+      }
+    } else { p.gamesCorr = 1.0; }
+
+    // Season weights for tooltip
+    const yrs = [...new Set(hist.map(h => h.year))].sort();
+    p.seasonInfo = yrs.map(yr => {
+      const yh = hist.filter(h => h.year === yr);
+      const g = yh.reduce((s,h) => s+h.games, 0);
+      const r = yh.reduce((s,h) => s+h.totalRat, 0);
+      const w = SEASON_WEIGHT[yr] || 0;
+      return { year: yr, avg: g > 0 ? r/g : 0, games: g, weight: w };
+    }).filter(s => s.weight > 0);
+
+    // Games-corrected RAT 365 (with age fade)
+    if (p.curGames > 0) {
+      const pct = p.curGames / EXPECTED[CUR_YEAR];
+      if (pct >= GAMES_MIN_PCT) {
+        const rawMult = Math.min(GAMES_MAX_MULT, Math.pow(EXPECTED[CUR_YEAR]/p.curGames, GAMES_BETA));
+        if (p.age !== null && p.age > GP_AGE_THRESHOLD) {
+          const fade = Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD));
+          p.rat365adj = p.rat365 * (1.0 + (rawMult - 1.0) * fade);
+        } else {
+          p.rat365adj = p.rat365 * rawMult;
+        }
+      } else { p.rat365adj = p.rat365; }
+    } else {
+      const prev = hist.filter(h => h.year === '2024-25');
+      const pg = prev.reduce((s,h) => s+h.games, 0) || 82;
+      const pct = pg / 82;
+      if (pct >= GAMES_MIN_PCT) {
+        const rawMult = Math.min(GAMES_MAX_MULT, Math.pow(82/pg, GAMES_BETA));
+        if (p.age !== null && p.age > GP_AGE_THRESHOLD) {
+          const fade = Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD));
+          p.rat365adj = p.rat365 * (1.0 + (rawMult - 1.0) * fade);
+        } else {
+          p.rat365adj = p.rat365 * rawMult;
+        }
+      } else { p.rat365adj = p.rat365; }
+    }
+  }
+
+  // Age multiplier: youth bonus below avg, mild penalty above 35
+  for (const p of roster) {
+    if (p.age !== null && p.age < avgAge) {
+      p.ageMult = 1.0 + AGE_MAX_BONUS * (avgAge - p.age) / maxDevYoung;
+    } else if (p.age !== null && p.age >= OLD_THRESHOLD) {
+      p.ageMult = Math.max(OLD_FLOOR, 1.0 - OLD_PENALTY_PER_YEAR * (p.age - OLD_THRESHOLD));
+    } else {
+      p.ageMult = 1.0;
+    }
+  }
+
+  // ═══ DEFENSIVE WATERMARK + DEF365 ═══
+  // Mirrors offensive structure: time-decay weighted historical + current blend
+  const DEF_SEASON_WEIGHT = {'2024-25':0.6,'2023-24':0.36,'2022-23':0.216,'2021-22':0.1296};
+  
+  // Season progress for def365: weight current vs last season by days elapsed
+  // NBA season roughly Oct 22 → Apr 13 ≈ 173 days
+  const SEASON_START = new Date(2025, 9, 22); // Oct 22, 2025
+  const SEASON_DAYS = 173;
+  const daysSinceStart = Math.max(0, (today - SEASON_START) / (24*60*60*1000));
+  const seasonProgress = Math.min(1.0, daysSinceStart / SEASON_DAYS);
+
+  const liveDefScores = defData ? defData.liveScores || {} : {};
+  const histDefScores = defData ? defData.histScores || {} : {};
+
+  // Build normalized name lookup for defense (handles NBA vs HH naming)
+  function normName(n) { return n.toLowerCase().replace(/[^a-z]/g, ''); }
+  const liveDefNorm = {};
+  for (const [k,v] of Object.entries(liveDefScores)) liveDefNorm[normName(k)] = v;
+  const histDefNorm = {};
+  for (const [k,v] of Object.entries(histDefScores)) histDefNorm[normName(k)] = v;
+
+  function findLiveDef(name) { return liveDefScores[name] || liveDefNorm[normName(name)] || 0; }
+  function findHistDef(name) { return histDefScores[name] || histDefNorm[normName(name)] || []; }
+
+  for (const p of roster) {
+    // Defensive watermark: time-decay weighted historical scores
+    const hist = findHistDef(p.player);
+    let defWmNum = 0, defWmDen = 0;
+    for (const h of hist) {
+      const w = DEF_SEASON_WEIGHT[h.year] || 0;
+      if (w <= 0 || h.gp <= 0) continue;
+      defWmNum += h.score * w * h.gp;
+      defWmDen += w * h.gp;
+    }
+    p.defWatermark = defWmDen > 0 ? defWmNum / defWmDen : 0;
+
+    // Defensive 365: blend live (2025-26) + last season (2024-25) by season progress
+    const liveDef = findLiveDef(p.player);
+    const lastSeason = hist.find(h => h.year === '2024-25');
+    const lastDef = lastSeason ? lastSeason.score : 0;
+    // If we have live data: weight by progress. If no live data: use last season only
+    if (liveDef > 0 && lastDef > 0) {
+      p.def365 = seasonProgress * liveDef + (1 - seasonProgress) * lastDef;
+    } else if (liveDef > 0) {
+      p.def365 = liveDef;
+    } else {
+      p.def365 = lastDef;
+    }
+  }
+
+  // Real value: full offensive TV × defensive multiplier × age × shooting
+  // Defense acts as a multiplier: avg defender = 1.0x, elite = up to ~1.15x, poor = down to ~0.85x
+  // This preserves offensive pool distribution while rewarding/penalizing defense
+  function softScore(r) { const s = Math.pow(Math.max(r, 0), EXPONENT); return s / (1.0 + s / KNEE); }
+
+  // Offensive pools (unchanged from before)
+  const totalAdjWM = roster.reduce((s,p) => s + softScore(p.watermark), 0);
+  const totalAdjRAT = roster.reduce((s,p) => s + softScore(p.rat365adj), 0);
+
+  // Compute defensive composite per player (85% defWM + 15% def365)
+  const hasDefense = roster.some(p => p.defWatermark > 0 || p.def365 > 0);
+  
+  if (hasDefense) {
+    // Each player's composite defensive score
+    for (const p of roster) {
+      p.defComposite = DEF_WM_WEIGHT * p.defWatermark + DEF_365_WEIGHT * p.def365;
+    }
+    // Pool average (only players with defensive data)
+    const withDef = roster.filter(p => p.defComposite > 0);
+    const avgDef = withDef.length > 0 ? withDef.reduce((s,p) => s + p.defComposite, 0) / withDef.length : 1;
+    console.log('=== DEFENSE MULT: avgDef=' + avgDef.toFixed(2) + ', players with def=' + withDef.length + ', seasonProgress=' + seasonProgress.toFixed(2) + ' ===');
     
-    // Metadata row
-    if (firstCell.toLowerCase().startsWith('season') || firstCell.includes('Updated')) {
-      meta = firstCell;
+    // Defensive multiplier: centered at 1.0 for average, scaled by DEF_OVERALL_WEIGHT
+    for (const p of roster) {
+      if (p.defComposite > 0) {
+        // How far above/below average (as ratio)
+        const defRatio = p.defComposite / avgDef;
+        // Multiplier: 1.0 + weight × (ratio - 1.0)
+        // With DEF_OVERALL_WEIGHT=0.15: elite (2x avg) → 1.15x, poor (0.5x avg) → 0.925x
+        p.defMult = 1.0 + DEF_OVERALL_WEIGHT * (defRatio - 1.0);
+        // Clamp to reasonable range
+        p.defMult = Math.max(0.75, Math.min(1.35, p.defMult));
+      } else {
+        p.defMult = 1.0; // No defensive data → neutral
+      }
+    }
+    
+    // Log sample players
+    const sorted = [...roster].sort((a,b) => b.defComposite - a.defComposite);
+    for (const p of sorted.slice(0, 5)) {
+      console.log('  DEF top: ' + p.player + ': composite=' + p.defComposite.toFixed(1) + ', mult=' + p.defMult.toFixed(3));
+    }
+    for (const p of sorted.slice(-3)) {
+      console.log('  DEF low: ' + p.player + ': composite=' + p.defComposite.toFixed(1) + ', mult=' + p.defMult.toFixed(3));
+    }
+  } else {
+    for (const p of roster) { p.defMult = 1.0; p.defComposite = 0; }
+  }
+
+  for (const p of roster) {
+    // Offensive TV (internal 85/15 WM/RAT blend — full pool, not reduced)
+    const tvWM = (softScore(p.watermark) / totalAdjWM) * totalSalaryPool;
+    const tvRAT = (softScore(p.rat365adj) / totalAdjRAT) * totalSalaryPool;
+    const offTV = WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT;
+
+    // Apply defensive multiplier
+    p.tvPreAge = offTV * p.defMult;
+    p.defComponent = offTV * (p.defMult - 1.0); // How much defense added/removed
+
+    // Shooting penalty: decrease by (value × 100)%
+    p.shootingPenalty = (shootingMap[p.player] || 0) * 2;
+    p.shootingMult = 1 - p.shootingPenalty;
+    p.tvWithAge = p.tvPreAge * p.ageMult * p.shootingMult;
+  }
+  const totalWithAge = roster.reduce((s,p) => s + p.tvWithAge, 0);
+  
+  // Calculate potential bonus for young players
+  function calcPotentialBonus(age, draftPick) {
+    // Only for players under 25 with valid draft position (1-60)
+    if (age === null || age >= MAX_POTENTIAL_AGE || !draftPick || draftPick < 1 || draftPick > 60) {
+      return 0;
+    }
+    // Draft position factor: exponential decay (pick 1 = 1.0, pick 60 ≈ 0.05)
+    const draftFactor = Math.exp(-DRAFT_DECAY * (draftPick - 1));
+    // Age factor: exponential decay (18.82 years = 1.0, 25 years ≈ 0.04)
+    const ageFromMin = Math.max(0, age - MIN_ROOKIE_AGE);
+    const ageFactor = Math.exp(-AGE_DECAY * ageFromMin);
+    return Math.round(POTENTIAL_MAX * draftFactor * ageFactor);
+  }
+  
+  // Compute final real values: base TV + potential bonus
+  for (const p of roster) {
+    const baseTV = Math.round((p.tvWithAge / totalWithAge) * totalSalaryPool);
+    p.potentialBonus = calcPotentialBonus(p.age, p.draftPick);
+    p.uncappedTV = baseTV + p.potentialBonus;
+  }
+  // Renormalize so total TV = salary pool (potential bonuses inflate the total)
+  const rawTotal = roster.reduce((s,p) => s + p.uncappedTV, 0);
+  const normFactor = totalSalaryPool / rawTotal;
+  for (const p of roster) {
+    p.uncappedTV = Math.round(p.uncappedTV * normFactor);
+    p.potentialBonus = Math.round(p.potentialBonus * normFactor);
+  }
+  for (const p of roster) {
+    p.exp = (expMap[p.player] !== undefined) ? expMap[p.player] : null;
+    // Estimate experience from age if EXP column is missing
+    const effExp = p.exp !== null ? p.exp : (p.age !== null ? Math.max(0, Math.round(p.age - 19)) : 0);
+    p.salCeil = getMaxSal(effExp);
+    // Floor: two-way for ≤3 yrs if under two-way; vet min if between two-way and vet min
+    const vetMin = effExp >= 10 ? MIN_SAL_10 : (MIN_SAL[effExp] || MIN_SAL[0]);
+    p.salFloor = effExp <= 3 ? TWO_WAY_SAL : vetMin;
+    p.capped = false;
+    p.floored = false;
+    p.twoWay = false;
+    if (p.uncappedTV > p.salCeil) { p.capped = true; }
+    else if (effExp <= 3 && p.uncappedTV < TWO_WAY_SAL) { p.floored = true; p.twoWay = true; }
+    else if (p.uncappedTV < vetMin && (effExp > 3 || p.uncappedTV >= TWO_WAY_SAL)) { p.floored = true; }
+    // Real value = uncapped real value; category = label
+    p.tradeValue = p.uncappedTV;
+    if (p.capped) { p.category = 'Max Player'; }
+    else if (p.twoWay) { p.category = 'Two-Way Player'; }
+    else if (p.floored) { p.category = 'Minimum Contract Player'; }
+    else { p.category = fmtFull$(p.uncappedTV); }
+    p.surplus = p.tradeValue - p.salary;
+  }
+
+  // ======== TRADE VALUE (contract-based surplus) ========
+  // Parse contracts sheet: cols [0]=PLAYER, [7]=2026 sal, [9]=ST25-26, [10]=2027 sal, [12]=ST26-27, etc.
+  // Also: [26]=OPTION, [27]=END, [38]=YOS
+  const contractMap = {};
+  if (contractRows && contractRows.length > 1) {
+    const parseSal = v => { const s = (v||'').replace(/[$,]/g,'').trim(); const n = parseInt(s); return isNaN(n) ? 0 : n; };
+    for (let i = 1; i < contractRows.length; i++) {
+      const r = contractRows[i];
+      if (!r[0] || r[0].length < 2) continue;
+      const name = r[0].trim();
+      const yrs = [];
+      const colMap = [{s:7,t:9,y:2026},{s:10,t:12,y:2027},{s:13,t:15,y:2028},{s:16,t:18,y:2029},{s:19,t:21,y:2030},{s:22,t:24,y:2031}];
+      for (const cm of colMap) {
+        const sal = parseSal(r[cm.s]);
+        const st = ((r[cm.t]||'').trim().toUpperCase());
+        if (sal > 0) yrs.push({ year: cm.y, salary: sal, status: st });
+      }
+      const end = parseInt(r[27]) || 0;
+      const yos = parseInt(r[38]);
+      const option = (r[26]||'').trim().toUpperCase();
+      contractMap[name] = { yrs, end, yos: isNaN(yos) ? 99 : yos, option };
+    }
+  }
+
+  // Max salary % by YOS (of salary cap)
+  const maxPctByYOS = yos => yos >= 10 ? 0.35 : yos >= 7 ? 0.30 : 0.25;
+
+  // Wear-and-tear discount: 5% per year for signed contract years (injury/decline risk)
+  // Does NOT apply to current season or RFA projected years (no commitment yet)
+  const WEAR_TEAR = 0.05;
+
+  // Compute Trade Value for each player
+  const curCap = CAP_PROJ[2026];
+  for (const p of roster) {
+    const c = contractMap[p.player];
+    p.contractYears = [];
+    p.contractEnd = 0;
+    p.contractTV = 0;
+    p.rfaYears = [];
+    p.poDeclined = false;
+    p.toDeclined = false;
+
+    if (!c || p.uncappedTV <= 0) continue;
+
+    p.contractEnd = c.end;
+    const capPct = p.uncappedTV / curCap; // Real Value as % of current cap
+
+    // Step 1: 2025-26 surplus (current season — no discount)
+    const surplus26 = p.uncappedTV - p.salary;
+    let tvSum = surplus26;
+    p.contractYears.push({ year: 2026, salary: p.salary, projVal: p.uncappedTV, surplus: surplus26, status: 'CURRENT', wt: 1.0 });
+
+    // Step 2: Future contract years (2027+) with PO/TO detection and wear-and-tear
+    let effectiveEnd = c.end;
+    for (const yr of c.yrs) {
+      if (yr.year < 2027) continue;
+      const projCap = CAP_PROJ[yr.year];
+      if (!projCap) continue;
+      const yearsOut = yr.year - 2026;
+      const wtFactor = Math.pow(1 - WEAR_TEAR, yearsOut);
+      const projVal = Math.round(capPct * projCap * wtFactor);
+
+      // Player Option: if projected value > option salary, player opts out
+      if (yr.status.includes('PLAYER OPT') && projVal > yr.salary) {
+        p.poDeclined = true;
+        effectiveEnd = yr.year - 1;
+        break;
+      }
+
+      // Team Option: if option salary > projected value, team declines
+      if (yr.status.includes('TEAM OPT') && yr.salary > projVal) {
+        p.toDeclined = true;
+        effectiveEnd = yr.year - 1;
+        break;
+      }
+
+      const surp = projVal - yr.salary;
+      tvSum += surp;
+      p.contractYears.push({ year: yr.year, salary: yr.salary, projVal, surplus: Math.round(surp), status: yr.status, wt: Math.round(wtFactor * 1000) / 1000 });
+    }
+
+    // Step 3: RFA projection (3 years) — NO wear-and-tear (no contract signed yet = no risk)
+    const yosAtEnd = c.yos + (effectiveEnd - 2025);
+    const isRFA = yosAtEnd <= 4 && surplus26 > 0;
+    if (isRFA) {
+      const rfaStartYear = effectiveEnd + 1;
+      const yosAtSigning = yosAtEnd + 1;
+      const maxPct = maxPctByYOS(yosAtSigning);
+      const startCap = CAP_PROJ[rfaStartYear];
+      if (startCap) {
+        let newSal = Math.round(Math.min(capPct, maxPct) * startCap);
+        for (let y = 0; y < 3; y++) {
+          const yr = rfaStartYear + y;
+          const projCap = CAP_PROJ[yr];
+          if (!projCap) break;
+          const projVal = Math.round(capPct * projCap);
+          const surp = projVal - newSal;
+          tvSum += surp;
+          p.rfaYears.push({ year: yr, salary: newSal, projVal, surplus: Math.round(surp), status: 'RFA PROJ', wt: null });
+          newSal = Math.round(newSal * 1.08);
+        }
+      }
+    }
+
+    p.contractTV = Math.round(tvSum);
+  }
+
+  // Normalize Trade Values so the league-wide sum = $0
+  // Distribute the offset proportionally by |TV| so big values absorb more
+  const rawTVTotal = roster.reduce((s, p) => s + p.contractTV, 0);
+  if (Math.abs(rawTVTotal) > 0) {
+    const totalAbsTV = roster.reduce((s, p) => s + Math.abs(p.contractTV), 0);
+    if (totalAbsTV > 0) {
+      for (const p of roster) {
+        p.contractTV = Math.round(p.contractTV - rawTVTotal * (Math.abs(p.contractTV) / totalAbsTV));
+      }
+      // Fix rounding residual on largest absolute TV player
+      const finalSum = roster.reduce((s, p) => s + p.contractTV, 0);
+      if (finalSum !== 0) {
+        const maxP = roster.reduce((a, b) => Math.abs(a.contractTV) > Math.abs(b.contractTV) ? a : b);
+        maxP.contractTV -= finalSum;
+      }
+    }
+  }
+  // Pool = sum of capped real values
+  const cappedPool = roster.reduce((s,p) => s + p.tradeValue, 0);
+  // Rank by uncapped (real) value
+  roster.sort((a,b) => b.uncappedTV - a.uncappedTV);
+  roster.forEach((p,i) => p.rank = i+1);
+
+  return { players: roster, totalSalaryPool: cappedPool, exponent: EXPONENT, avgAge };
+}
+
+let appData = null;
+let snapshot = null;
+
+function takeSnapshot() {
+  if (!appData) return;
+  snapshot = {};
+  for (const p of appData.players) {
+    snapshot[p.player] = { rank: p.rank, tv: p.uncappedTV, surplus: p.surplus, watermark: p.watermark, rat365: p.rat365, contractTV: p.contractTV };
+  }
+  document.getElementById('snapBanner').style.display = 'block';
+  document.getElementById('snapshotBtn').classList.add('active');
+  document.getElementById('snapshotBtn').textContent = '📸 Locked';
+  document.getElementById('clearSnapBtn').style.display = '';
+  update();
+}
+
+function clearSnapshot() {
+  snapshot = null;
+  document.getElementById('snapBanner').style.display = 'none';
+  document.getElementById('snapshotBtn').classList.remove('active');
+  document.getElementById('snapshotBtn').textContent = '📸 Snapshot';
+  document.getElementById('clearSnapBtn').style.display = 'none';
+  update();
+}
+
+// Top-level defensive tab fetcher (used by both init and refreshData)
+async function fetchDefTab(tab, retries) {
+  var url = defTabURL(tab);
+  for (var attempt = 0; attempt < (retries || 3); attempt++) {
+    var r = await fetch(url);
+    if (r.ok) return r.json();
+    if (r.status === 429) {
+      await new Promise(function(res) { setTimeout(res, (attempt+1)*2000); });
       continue;
     }
-    
-    // Skip empty/near-empty rows
-    const nonEmpty = row.filter(c => (c || '').trim() !== '').length;
-    if (nonEmpty < 3) continue;
-    
-    // This looks like headers
-    headerIdx = i;
-    break;
+    var body = '';
+    try { body = await r.text(); } catch(e) {}
+    throw new Error('HTTP ' + r.status + ' for "' + tab + '": ' + body.slice(0,200));
   }
-  
-  if (headerIdx < 0) return { headers: [], rows: [], meta };
-  
-  const headers = data.values[headerIdx].map(h => (h || '').trim());
-  const rows = data.values.slice(headerIdx + 1).map(r => mapRow(headers, r));
-  return { headers, rows, meta };
+  throw new Error('Retries exhausted for "' + tab + '"');
 }
-
-// ═══════════════════════════════════════════════════════
-// DEFENSIVE SCORE v3 FORMULA
-// ═══════════════════════════════════════════════════════
-
-// Archetype: perimeter weight via sigmoid on BLK/G
-function perimeterWeight(blkPg) {
-  return 1.0 / (1.0 + Math.exp(3.0 * (blkPg - 1.0)));
-}
-
-const INTERIOR_FEATURES = {
-  'PCT_PLUSMINUS':     { w: 22, d: -1 },
-  'BLK_PG':            { w: 22, d:  1 },
-  'DEF_RATING':        { w: 14, d: -1 },
-  'NET_RATING':        { w: 10, d:  1 },
-  'D_FG_PCT':          { w: 10, d: -1 },
-  'CONTESTED_SHOTS_PG':{ w:  8, d:  1 },
-  'STL_PG':            { w:  5, d:  1 },
-  'DEFLECTIONS_PG':    { w:  5, d:  1 },
-  'REB_PG':            { w:  4, d:  1 },
-};
-
-const PERIMETER_FEATURES = {
-  'STL_PG':              { w: 22, d:  1 },
-  'DEFLECTIONS_PG':      { w: 16, d:  1 },
-  'PF_PG':               { w:  8, d:  1 },
-  'CHARGES_DRAWN_PG':    { w:  6, d:  1 },
-  'PCT_PLUSMINUS':       { w: 12, d: -1 },
-  'NET_RATING':          { w:  8, d:  1 },
-  'W':                   { w:  8, d:  1 },
-  'D_FG_PCT':            { w:  6, d: -1 },
-  'DEF_RATING':          { w:  6, d: -1 },
-  'MPG':                 { w:  4, d:  1 },
-  'LOOSE_BALLS_RECOVERED_PG': { w: 4, d: 1 },
-};
-
-// Collect all feature keys
-const ALL_FEATURES = new Set();
-for (const f in INTERIOR_FEATURES) ALL_FEATURES.add(f);
-for (const f in PERIMETER_FEATURES) ALL_FEATURES.add(f);
-
-function computeDefensiveScores(players) {
-  // Z-scores computed from QUALIFIED pool only (GP>=20, MPG>=20)
-  // to match historical data distribution. Applied to all players.
-  const qualified = players.filter(p => p.GP >= 20 && p.MPG >= 20);
-  const featureKeys = [...ALL_FEATURES];
-  const means = {}, stds = {};
-  for (const f of featureKeys) {
-    const vals = qualified.map(p => p[f]).filter(v => v !== null && v !== undefined && !isNaN(v));
-    const n = vals.length;
-    if (n === 0) { means[f] = 0; stds[f] = 1; continue; }
-    const mean = vals.reduce((a,b) => a+b, 0) / n;
-    const variance = vals.reduce((a,v) => a + (v - mean) ** 2, 0) / n;
-    means[f] = mean;
-    stds[f] = Math.sqrt(variance) || 1;
-  }
-
-  for (const p of players) {
-    for (const f of featureKeys) {
-      p[f + '_z'] = (p[f] !== null && p[f] !== undefined && !isNaN(p[f]))
-        ? (p[f] - means[f]) / stds[f]
-        : 0;
-    }
-  }
-
-  // Interior & perimeter raw scores
-  for (const p of players) {
-    let intScore = 0;
-    for (const [f, {w, d}] of Object.entries(INTERIOR_FEATURES)) {
-      intScore += w * d * (p[f + '_z'] || 0);
-    }
-    let perScore = 0;
-    for (const [f, {w, d}] of Object.entries(PERIMETER_FEATURES)) {
-      perScore += w * d * (p[f + '_z'] || 0);
-    }
-    p.INTERIOR_RAW = intScore;
-    p.PERIMETER_RAW = perScore;
-    p.BASE_RAW = p.PERIM_W * perScore + (1 - p.PERIM_W) * intScore;
-  }
-
-  // Anchor bonus using real team DRTG
-  const medianWins = median(players.map(p => p.W || 0));
-  for (const p of players) {
-    p.ANCHOR_BONUS = computeAnchorBonus(p, medianWins);
-  }
-
-  // Final raw = base + anchor
-  for (const p of players) {
-    p.FINAL_RAW = p.BASE_RAW + p.ANCHOR_BONUS;
-  }
-
-  // Organic scoring: fixed linear transform on raw composite
-  // Z-score composites have stable distributions across seasons,
-  // so a fixed scale produces naturally varying top scores (~30-37)
-  // that allow meaningful cross-season comparison.
-  const SCORE_SCALE = 0.07;     // Controls spread
-  const SCORE_BASELINE = 14.5;  // Average defender ≈ 15
-  for (const p of players) {
-    p.DEF_SCORE = Math.max(0, p.FINAL_RAW * SCORE_SCALE + SCORE_BASELINE);
-  }
-
-  // Rank
-  players.sort((a, b) => b.DEF_SCORE - a.DEF_SCORE);
-  players.forEach((p, i) => p.RANK = i + 1);
-}
-
-function computeAnchorBonus(player, medianWins) {
-  const rank = player.TEAM_DEF_RANK;
-  if (!rank || rank > 15) return 0;
-
-  // Team defense tier
-  let teamFactor;
-  if (rank <= 5) teamFactor = 1.0;
-  else if (rank <= 10) teamFactor = 0.5;
-  else teamFactor = 0.25;
-
-  // Minutes factor: 0 at 25 MPG → 1.0 at 34+
-  const minFactor = Math.max(0, Math.min(1.0, (player.MPG - 25) / 9));
-
-  // Scheme factor: player DRTG vs team DRTG
-  const teamDrtg = player.TEAM_DEF_RATING;
-  const playerDrtg = player.DEF_RATING;
-  let schemeFactor = 0.5;
-  if (teamDrtg && playerDrtg) {
-    const diff = teamDrtg - playerDrtg; // positive = player better
-    schemeFactor = Math.max(0.15, Math.min(1.0, 0.5 + diff / 8));
-  }
-
-  // Win factor
-  const wins = player.W || 0;
-  const winFactor = Math.max(0.3, Math.min(1.0, 0.5 + (wins - medianWins) / 25));
-
-  const MAX_BONUS = 18;
-  return MAX_BONUS * teamFactor * minFactor * schemeFactor * winFactor;
-}
-
-function median(arr) {
-  if (arr.length === 0) return 0;
-  const sorted = [...arr].sort((a,b) => a-b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid-1] + sorted[mid]) / 2;
-}
-
-// ═══════════════════════════════════════════════════════
-// DATA LOADING & JOINING
-// ═══════════════════════════════════════════════════════
-let appData = null;
 
 async function refreshData() {
+  console.log('=== Real Value v2.9-DEF — refreshData starting ===');
+  console.log('DEF_TABS defined?', typeof DEF_TABS, DEF_TABS ? Object.keys(DEF_TABS) : 'UNDEFINED');
+  console.log('defTabURL defined?', typeof defTabURL);
   const btn = document.getElementById('refreshBtn');
-  btn.textContent = '⏳ Loading…';
+  btn.textContent = '⏳ Loading...';
   btn.disabled = true;
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('mainTable').style.display = 'none';
-  document.getElementById('error').style.display = 'none';
-
   try {
-    // Fetch tabs sequentially with delay to avoid 429 rate limits
-    async function fetchTab(tab, retries = 3) {
-      for (let attempt = 0; attempt < retries; attempt++) {
-        const res = await fetch(makeURL(tab));
-        if (res.ok) return res.json();
-        if (res.status === 429) {
-          const wait = (attempt + 1) * 2000; // 2s, 4s, 6s backoff
-          console.log(`Rate limited on '${tab}', retrying in ${wait}ms...`);
-          await new Promise(r => setTimeout(r, wait));
-          continue;
-        }
-        throw new Error(`HTTP ${res.status} for ${tab}`);
-      }
-      throw new Error(`Failed after ${retries} retries for '${tab}'`);
-    }
-
-    const tabKeys = Object.keys(TABS);
-    const tabResults = {};
-    const loadEl = document.getElementById('loading');
-    for (let i = 0; i < tabKeys.length; i++) {
-      const key = tabKeys[i];
-      loadEl.innerHTML = `<div class="spinner"></div><br>Fetching ${TABS[key]}… (${i+1}/${tabKeys.length})`;
-      tabResults[key] = await fetchTab(TABS[key]);
-      // Small delay between requests
-      if (i < tabKeys.length - 1) await new Promise(r => setTimeout(r, 500));
-    }
-
-    const [tradRes, advRes, hustleRes, defTrkRes, teamAdvRes] =
-      [tabResults.trad, tabResults.adv, tabResults.hustle, tabResults.defTrk, tabResults.teamAdv];
-
-    // Fetch nomenclature (NBA NAME → HH NAME) from Daily Stats spreadsheet
-    loadEl.innerHTML = `<div class="spinner"></div><br>Fetching nomenclature…`;
-    let nameMap = {}; // NBA NAME → HH NAME
-    try {
-      const nomenRes = await fetch(NOMEN_URL);
-      if (nomenRes.ok) {
-        const csvText = await nomenRes.text();
-        const csvRows = parseCSV(csvText);
-        // Col L (index 11) = NBA NAME, Col M (index 12) = HH NAME
-        // Skip rows that look like headers/metadata
-        for (const row of csvRows) {
-          const nbaName = (row[11] || '').trim();
-          const hhName  = (row[12] || '').trim();
-          if (nbaName && hhName && nbaName !== 'NBA NAME' && !nbaName.toLowerCase().startsWith('season')) {
-            nameMap[nbaName] = hhName;
-          }
-        }
-        console.log(`Nomenclature loaded: ${Object.keys(nameMap).length} player name mappings`);
-        if (Object.keys(nameMap).length > 0) {
-          const sample = Object.entries(nameMap).slice(0, 3);
-          console.log('Name map sample:', sample);
-        }
-      }
-    } catch (e) {
-      console.warn('Nomenclature fetch failed (non-fatal):', e.message);
-    }
-    loadEl.innerHTML = `<div class="spinner"></div><br>Processing data…`;
-
-    const trad    = parseSheet(tradRes);
-    const adv     = parseSheet(advRes);
-    const hustle  = parseSheet(hustleRes);
-    const defTrk  = parseSheet(defTrkRes);
-    const teamAdv = parseSheet(teamAdvRes);
-
-    console.log('=== DEFENSIVE RANKINGS DEBUG ===');
-    console.log('Trad:', trad.headers.length, 'cols,', trad.rows.length, 'rows. Headers:', trad.headers.slice(0,10));
-    console.log('Adv:', adv.headers.length, 'cols,', adv.rows.length, 'rows. Headers:', adv.headers.slice(0,10));
-    console.log('Hustle:', hustle.headers.length, 'cols,', hustle.rows.length, 'rows');
-    console.log('DefTrk:', defTrk.headers.length, 'cols,', defTrk.rows.length, 'rows. Headers:', defTrk.headers);
-    console.log('TeamAdv:', teamAdv.headers.length, 'cols,', teamAdv.rows.length, 'rows');
-    if (trad.rows[0]) console.log('Trad row 0 sample:', { PLAYER_NAME: trad.rows[0].PLAYER_NAME, TEAM_ABBREVIATION: trad.rows[0].TEAM_ABBREVIATION, GP: trad.rows[0].GP, MIN: trad.rows[0].MIN, STL: trad.rows[0].STL });
-
-    // Extract last updated from metadata
-    const metaMatch = (trad.meta || '').match(/Last Updated:\s*(.+)/);
-    const lastUpdated = metaMatch ? metaMatch[1].trim() : 'Unknown';
-
-    // Build team defense lookup: team abbreviation → { drtg, rank }
-    // Team Advanced has TEAM_NAME ("Atlanta Hawks") but no abbreviation column.
-    // Players have abbreviations ("ATL"). Build a bridge from player data.
-    const teamNameToAbbr = {};
-    for (const r of trad.rows) {
-      const abbr = resolveCol(r, 'TEAM_ABBREVIATION', 'TEAM_ABB').trim();
-      const id   = resolveCol(r, 'TEAM_ID').trim();
-      if (abbr && id) teamNameToAbbr[id] = abbr;
-    }
-    console.log('Team ID→Abbr map:', teamNameToAbbr);
-
-    const teamDefMap = {};
-    const teamRows = teamAdv.rows
-      .map(r => {
-        const id   = resolveCol(r, 'TEAM_ID').trim();
-        const name = resolveCol(r, 'TEAM_NAME').trim();
-        const abbr = teamNameToAbbr[id] || '';
-        const drtg = parseNum(resolveCol(r, 'DEF_RATING', 'DRTG', 'DEF_RTG'));
-        return { team: abbr, name, drtg };
-      })
-      .filter(r => r.team && r.drtg !== null && r.drtg < 999);
-    teamRows.sort((a, b) => a.drtg - b.drtg);
-    teamRows.forEach((t, i) => { teamDefMap[t.team] = { drtg: t.drtg, rank: i + 1, name: t.name }; });
-
-    console.log('Team defense map:', Object.keys(teamDefMap).length, 'teams', teamDefMap);
-
-    // Build lookup maps for adv, hustle, defTrk by player name + team
-    function buildLookup(rows) {
-      const map = {};
-      for (const r of rows) {
-        const name = resolveCol(r, 'PLAYER_NAME', 'PLAYER', 'Player').trim();
-        const team = resolveCol(r, 'TEAM_ABBREVIATION', 'TEAM_ABB', 'PLAYER_LAST_TEAM_ABBREVIATION', 'ABBREVIATION').trim();
-        if (name) {
-          map[name + '|' + team] = r;
-          if (!map[name]) map[name] = r; // name-only fallback
-        }
-      }
-      return map;
-    }
-
-    function lookupPlayer(lookupMap, name, team) {
-      return lookupMap[name + '|' + team] || lookupMap[name] || {};
-    }
-
-    const advMap     = buildLookup(adv.rows);
-    const hustleMap  = buildLookup(hustle.rows);
-    const defTrkMap  = buildLookup(defTrk.rows);
-
-    // Process traditional stats → base player records
-    // No hard GP/MPG filter here — let the UI minutes filter handle it
-    const players = [];
-    let skippedNoName = 0, skippedNoDefData = 0;
-
-    for (const r of trad.rows) {
-      const name = resolveCol(r, 'PLAYER_NAME', 'PLAYER', 'Player').trim();
-      const team = resolveCol(r, 'TEAM_ABBREVIATION', 'TEAM_ABB', 'ABBREVIATION').trim();
-      if (!name || !team) { skippedNoName++; continue; }
-
-      const gp  = parseNum(resolveCol(r, 'GP', 'G', 'Games')) || 0;
-      const min = parseNum(resolveCol(r, 'MIN', 'Minutes')) || 0;
-      const mpg = gp > 0 ? min / gp : 0;
-      if (gp < 1) { continue; } // need at least 1 game
-
-      const advR     = lookupPlayer(advMap, name, team);
-      const hustleR  = lookupPlayer(hustleMap, name, team);
-      const defTrkR  = lookupPlayer(defTrkMap, name, team);
-      const teamDef  = teamDefMap[team] || {};
-
-      // Hustle GP might differ — use it for hustle per-game calcs
-      const hustleGP = parseNum(resolveCol(hustleR, 'G', 'GP')) || gp;
-
-      const p = {
-        PLAYER: nameMap[name] || name, // Use HH nomenclature if available
-        PLAYER_NBA: name, // Keep original for lookups
-        TEAM: team,
-        GP: gp,
-        MPG: mpg,
-        TOTAL_MIN: min,
-        // Per-game counting stats from Traditional Totals
-        STL_PG: gp > 0 ? (parseNum(resolveCol(r, 'STL')) || 0) / gp : 0,
-        BLK_PG: gp > 0 ? (parseNum(resolveCol(r, 'BLK')) || 0) / gp : 0,
-        REB_PG: gp > 0 ? (parseNum(resolveCol(r, 'REB')) || 0) / gp : 0,
-        PF_PG:  gp > 0 ? (parseNum(resolveCol(r, 'PF'))  || 0) / gp : 0,
-        W: parseNum(resolveCol(r, 'W', 'WIN', 'WINS')) || 0,
-        // Advanced
-        DEF_RATING: parseNum(resolveCol(advR, 'DEF_RATING', 'DRTG', 'DEF_RTG')),
-        NET_RATING: parseNum(resolveCol(advR, 'NET_RATING', 'NRTG', 'NET_RTG')),
-        // Hustle per-game (using hustle GP)
-        DEFLECTIONS_PG:    hustleGP > 0 ? (parseNum(resolveCol(hustleR, 'DEFLECTIONS', 'DEFL'))           || 0) / hustleGP : 0,
-        CONTESTED_SHOTS_PG:hustleGP > 0 ? (parseNum(resolveCol(hustleR, 'CONTESTED_SHOTS', 'CONT_SHOTS')) || 0) / hustleGP : 0,
-        CHARGES_DRAWN_PG:  hustleGP > 0 ? (parseNum(resolveCol(hustleR, 'CHARGES_DRAWN'))                 || 0) / hustleGP : 0,
-        LOOSE_BALLS_RECOVERED_PG: hustleGP > 0 ? (parseNum(resolveCol(hustleR, 'LOOSE_BALLS_RECOVERED', 'LOOSE_BALLS')) || 0) / hustleGP : 0,
-        // Def tracking
-        D_FG_PCT:       parseNum(resolveCol(defTrkR, 'D_FG_PCT', 'DFG_PCT')),
-        PCT_PLUSMINUS:   parseNum(resolveCol(defTrkR, 'PCT_PLUSMINUS', 'PLUSMINUS_PCT', 'PLUS_MINUS')),
-        // Team defense
-        TEAM_DEF_RATING: teamDef.drtg || null,
-        TEAM_DEF_RANK:   teamDef.rank || null,
-      };
-
-      // Archetype
-      p.PERIM_W = perimeterWeight(p.BLK_PG);
-
-      // Validate: need at least some defensive data to score
-      if (p.DEF_RATING === null && p.D_FG_PCT === null) { skippedNoDefData++; continue; }
-
-      players.push(p);
-    }
-
-    console.log(`Player processing: ${players.length} passed, ${skippedNoName} no name, ${skippedNoDefData} no def data`);
+    // Fetch offensive data (existing)
+    const [res, cRes] = await Promise.all([
+      fetch(RATINGS_URL),
+      fetch(CONTRACT_URL)
+    ]);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const ratingsRows = (await res.json()).values || [];
+    const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
     
-    // Debug: check team matching
-    if (players.length > 0) {
-      const playerTeams = [...new Set(players.map(p => p.TEAM))].sort();
-      const mapTeams = Object.keys(teamDefMap).sort();
-      const matched = playerTeams.filter(t => teamDefMap[t]);
-      const unmatched = playerTeams.filter(t => !teamDefMap[t]);
-      console.log(`Team matching: ${matched.length} matched, ${unmatched.length} unmatched`);
-      if (unmatched.length > 0) console.log('Unmatched player teams:', unmatched);
-      if (mapTeams.length > 0) console.log('Map teams sample:', mapTeams.slice(0, 5));
-      // Check anchor-eligible players
-      const withRank = players.filter(p => p.TEAM_DEF_RANK && p.TEAM_DEF_RANK <= 15);
-      console.log(`Anchor-eligible players (top-15 team): ${withRank.length}`);
+    console.log('DEF-CHECKPOINT-1: Offensive data loaded, ratings:', ratingsRows.length, 'contracts:', contractRows.length);
+
+    // Fetch defensive data (sequential to avoid 429)
+    let defData = null;
+    console.log('DEF: === STARTING DEFENSIVE PIPELINE ===');
+    console.log('DEF: Stats sheet ID:', STATS_SHEET_ID);
+    console.log('DEF: Sample URL:', defTabURL(DEF_TABS.trad));
+
+    try {
+      btn.textContent = '⏳ Defense...';
+
+      const tabKeys = Object.keys(DEF_TABS);
+      const tabResults = {};
+      for (let i = 0; i < tabKeys.length; i++) {
+        const tabName = DEF_TABS[tabKeys[i]];
+        console.log(`Fetching defense tab ${i+1}/${tabKeys.length}: "${tabName}"...`);
+        try {
+          tabResults[tabKeys[i]] = await fetchDefTab(tabName);
+          console.log(`  ✓ ${tabName}: ${tabResults[tabKeys[i]].values?.length || 0} rows`);
+        } catch (tabErr) {
+          console.log(`  ✗ ${tabName} FAILED:`, tabErr.message);
+          throw tabErr;
+        }
+        if (i < tabKeys.length - 1) await new Promise(r => setTimeout(r, 400));
+      }
+
+      const sheets = {};
+      for (const k of tabKeys) sheets[k] = parseDefSheet(tabResults[k]);
+      
+      console.log('=== DEFENSIVE DATA DEBUG ===');
+      for (const k of tabKeys) {
+        const s = sheets[k];
+        console.log(`  ${k}: ${s.headers.length} headers, ${s.rows.length} rows`, s.headers.slice(0,5));
+      }
+      if (sheets.defHist.rows[0]) console.log('  defHist row 0:', JSON.stringify(sheets.defHist.rows[0]));
+
+      // Compute live 2025-26 defensive scores
+      const liveScores = computeLiveDefScores(sheets.trad, sheets.adv, sheets.hustle, sheets.defTrk, sheets.teamAdv);
+
+      // Parse historical defensive scores
+      const histScores = parseDefHistory(sheets.defHist);
+
+      defData = { liveScores, histScores };
+      console.log(`Defense loaded: ${Object.keys(liveScores).length} live, ${Object.keys(histScores).length} history players`);
+      
+      // Show sample watermark data
+      const sampleNames = Object.keys(histScores).slice(0,3);
+      for (const n of sampleNames) console.log(`  ${n}: ${histScores[n].map(h => h.year+'='+h.score).join(', ')}`);
+    } catch (defErr) {
+      console.log('❌ DEF FETCH FAILED:', defErr.message);
+      console.log('DEF Stack:', defErr.stack);
+      console.log('DEF: Is Season Stats sheet shared? Sheet ID:', STATS_SHEET_ID);
+      // Continue without defense — formula falls back to pure offensive
     }
 
-    if (players.length === 0) {
-      // Diagnostic: show what columns we actually received
-      const diag = [];
-      diag.push('=== COLUMN DIAGNOSTICS ===');
-      diag.push(`Trad: ${trad.rows.length} rows, headers: [${trad.headers.join(', ')}]`);
-      diag.push(`Adv: ${adv.rows.length} rows, headers: [${adv.headers.join(', ')}]`);
-      diag.push(`Hustle: ${hustle.rows.length} rows, headers: [${hustle.headers.join(', ')}]`);
-      diag.push(`DefTrk: ${defTrk.rows.length} rows, headers: [${defTrk.headers.join(', ')}]`);
-      diag.push(`TeamAdv: ${teamAdv.rows.length} rows, headers: [${teamAdv.headers.join(', ')}]`);
-      diag.push(`Skipped: ${skippedNoName} no-name, ${skippedNoDefData} no-def-data`);
-      if (trad.rows[0]) diag.push(`Sample trad row keys: [${Object.keys(trad.rows[0]).join(', ')}]`);
-      if (trad.rows[0]) diag.push(`Sample trad row vals: PLAYER_NAME=${trad.rows[0].PLAYER_NAME}, GP=${trad.rows[0].GP}, MIN=${trad.rows[0].MIN}`);
-      if (adv.rows[0]) diag.push(`Sample adv row: DEF_RATING=${adv.rows[0].DEF_RATING}`);
-      if (defTrk.rows[0]) diag.push(`Sample defTrk keys: [${Object.keys(defTrk.rows[0]).join(', ')}]`);
-      const msg = diag.join('\n');
-      console.error(msg);
-      throw new Error(msg);
-    }
-
-    // Compute scores
-    computeDefensiveScores(players);
-
-    appData = { players, lastUpdated, teamDefMap };
-    buildStats();
-    buildTeamFilter();
+    appData = processData(ratingsRows, contractRows, defData);
+    buildStats(appData);
     update();
-
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('mainTable').style.display = '';
-
-  } catch (err) {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('error').style.display = 'block';
-    document.getElementById('error').textContent = `Error: ${err.message}`;
-    console.error(err);
+    
+    // Show defense status
+    const defStatus = defData ? `🛡️ DEF: ${Object.keys(defData.liveScores).length} live / ${Object.keys(defData.histScores).length} hist` : '⚠️ No defense';
+    btn.textContent = '✅ Updated';
+    console.log(defStatus);
+    setTimeout(() => { btn.textContent = '🔄 Refresh'; }, 1500);
+  } catch(err) {
+    console.error('Refresh error:', err);
+    btn.textContent = '❌ Error';
+    setTimeout(() => { btn.textContent = '🔄 Refresh'; }, 2000);
   }
-  btn.textContent = '↻ Refresh';
   btn.disabled = false;
 }
 
-function buildStats() {
-  if (!appData) return;
-  const p = appData.players;
-  document.getElementById('statPlayers').textContent = p.length;
-  document.getElementById('statTop').textContent = p[0] ? p[0].PLAYER : '—';
-  document.getElementById('statScore').innerHTML = p[0]
-    ? `${p[0].DEF_SCORE.toFixed(1)} <span class="unit">pts</span>`
-    : '—';
-  document.getElementById('statDate').innerHTML = `<span class="unit">${appData.lastUpdated}</span>`;
+function deltaHTML(cur, prev, invert) {
+  if (prev === undefined || prev === null) return '';
+  const d = cur - prev;
+  if (Math.abs(d) < 0.005) return '';
+  const sign = invert ? -d : d;
+  const cls = sign > 0 ? 'delta-up' : 'delta-down';
+  const arrow = sign > 0 ? '▲' : '▼';
+  return `<span class="delta ${cls}">${arrow}${Math.abs(d) >= 1e5 ? fmt$(Math.abs(d)) : Math.abs(d).toLocaleString(undefined,{maximumFractionDigits:2})}</span>`;
 }
 
-function buildTeamFilter() {
-  if (!appData) return;
+function rankDelta(cur, prev) {
+  if (prev === undefined || prev === null) return '';
+  const d = prev - cur;
+  if (d === 0) return '';
+  const cls = d > 0 ? 'delta-up' : 'delta-down';
+  const arrow = d > 0 ? '▲' : '▼';
+  return `<span class="delta ${cls}">${arrow}${Math.abs(d)}</span>`;
+}
+
+function fmt$(n) { const a=Math.abs(n); if(a>=1e6)return(n<0?'-':'')+'$'+(a/1e6).toFixed(1)+'M'; if(a>=1e3)return(n<0?'-':'')+'$'+(a/1e3).toFixed(0)+'K'; return '$'+n.toLocaleString(); }
+function fmtFull$(n) { return (n<0?'-$':'$')+Math.abs(n).toLocaleString(); }
+function ratCls(r) { return r>=18?'rat-elite':r>=12?'rat-star':r>=6?'rat-solid':r>=2?'rat-avg':'rat-low'; }
+function rankCls(r) { return r<=5?'rank-top5':r<=20?'rank-top20':r<=50?'rank-top50':''; }
+function surpCls(s) { return s>5e5?'surplus-pos':s<-5e5?'surplus-neg':'surplus-neutral'; }
+
+function buildStats(d) {
+  const avgWM = d.players.reduce((s,p) => s+p.watermark, 0) / d.players.length;
+  document.getElementById('statsBar').innerHTML = [
+    {l:'Salary Pool',v:'$'+(d.totalSalaryPool/1e9).toFixed(2),u:'B'},
+    {l:'Players Ranked',v:d.players.length,u:''},
+    {l:'Avg Age',v:d.avgAge.toFixed(1),u:' yrs'},
+    {l:'Formula',v:'85/15',u:' + age + GP fade + soft cap'}
+  ].map(s=>`<div class="stat-card"><div class="label">${s.l}</div><div class="value">${s.v}<span class="unit">${s.u}</span></div></div>`).join('');
+}
+
+function buildTeams(d) {
   const sel = document.getElementById('teamFilter');
-  const teams = [...new Set(appData.players.map(p => p.TEAM))].sort();
   sel.innerHTML = '<option value="">All Teams</option>';
-  for (const t of teams) {
-    sel.innerHTML += `<option value="${t}">${t}</option>`;
-  }
+  [...new Set(d.players.map(p=>p.team))].sort().forEach(t => { const o=document.createElement('option'); o.value=t; o.textContent=t; sel.appendChild(o); });
 }
 
-// ═══════════════════════════════════════════════════════
-// RENDERING
-// ═══════════════════════════════════════════════════════
-let sortCol = 'rank', sortAsc = false;
+function renderTable(players) {
+  const maxS = Math.max(...appData.players.map(p=>Math.abs(p.surplus)));
+  document.getElementById('tableBody').innerHTML = players.map((p,i) => {
+    const pct = Math.min(Math.abs(p.surplus)/maxS*50, 50);
+    const bc = p.surplus>=0?'positive':'negative';
+    const s = snapshot ? snapshot[p.player] : null;
+    return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
+      <td class="col-rank ${rankCls(p.rank)}">${p.rank}${s ? rankDelta(p.rank, s.rank) : ''}</td>
+      <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
+      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.defMult !== 1.0 ? `<br><span class="tt-label">Def mult:</span> <span class="tt-val" style="color:${p.defMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">×${p.defMult.toFixed(3)}</span> <span class="tt-label">(${p.defComposite.toFixed(1)} pts)</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
+      <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}${s ? deltaHTML(p.rat365, s.rat365, false) : ''}</td>
+      <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}${s ? deltaHTML(p.watermark, s.watermark, false) : ''}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
+      <td class="col-num">${fmtFull$(p.salary)}</td>
+      <td class="col-num col-real-value">${fmtFull$(p.tradeValue)}${s ? deltaHTML(p.uncappedTV, s.tv, false) : ''}</td>
+      <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text-secondary)'}">${p.category}</td>
+      <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span>${s ? deltaHTML(p.surplus, s.surplus, false) : ''}</div></td>
+      <td class="col-num wm-detail ${p.contractTV>0?'surplus-pos':p.contractTV<0?'surplus-neg':''}"><span style="font-weight:700">${p.contractTV!==0 ? ((p.contractTV>0?'+':'')+fmt$(p.contractTV)) : '—'}</span>${(p.contractYears.length || p.rfaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
+      <td class="col-num" style="font-size:0.75rem;color:var(--text-muted)">${p.contractEnd >= 2027 ? p.contractEnd : 'EXP'}${p.rfaYears.length ? ' <span style="color:var(--accent-gold)">RFA</span>' : ''}${p.poDeclined ? ' <span style="color:var(--accent)">PO↗</span>' : ''}${p.toDeclined ? ' <span style="color:var(--surplus-neg)">TO✗</span>' : ''}</td>
+    </tr>`;
+  }).join('');
+}
 
 function update() {
   if (!appData) return;
-  let filtered = [...appData.players];
-
-  // Filters
-  const search = document.getElementById('search').value.toLowerCase();
-  const teamF  = document.getElementById('teamFilter').value;
-  const gpF    = parseInt(document.getElementById('gpFilter').value) || 0;
-
-  if (search) filtered = filtered.filter(p => p.PLAYER.toLowerCase().includes(search) || p.TEAM.toLowerCase().includes(search));
-  if (teamF)  filtered = filtered.filter(p => p.TEAM === teamF);
-  if (gpF > 0) filtered = filtered.filter(p => p.GP >= gpF);
-
-  // Sort
-  const col = sortCol;
-  filtered.sort((a, b) => {
-    let va, vb;
-    switch (col) {
-      case 'rank':    va = a.DEF_SCORE; vb = b.DEF_SCORE; return sortAsc ? va - vb : vb - va;
-      case 'player':  va = a.PLAYER; vb = b.PLAYER; return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-      case 'team':    va = a.TEAM; vb = b.TEAM; return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-      case 'score':   va = a.DEF_SCORE; vb = b.DEF_SCORE; break;
-      case 'stl':     va = a.STL_PG; vb = b.STL_PG; break;
-      case 'blk':     va = a.BLK_PG; vb = b.BLK_PG; break;
-      case 'defl':    va = a.DEFLECTIONS_PG; vb = b.DEFLECTIONS_PG; break;
-      case 'contest': va = a.CONTESTED_SHOTS_PG; vb = b.CONTESTED_SHOTS_PG; break;
-      case 'dfgpct':  va = a.D_FG_PCT||0; vb = b.D_FG_PCT||0; break;
-      case 'dfgdiff': va = a.PCT_PLUSMINUS||0; vb = b.PCT_PLUSMINUS||0; break;
-      case 'drtg':    va = a.DEF_RATING||999; vb = b.DEF_RATING||999; break;
-      case 'gp':      va = a.GP; vb = b.GP; break;
-      case 'mpg':     va = a.MPG; vb = b.MPG; break;
-      case 'spm':     va = a.MPG>0?a.DEF_SCORE/a.MPG:0; vb = b.MPG>0?b.DEF_SCORE/b.MPG:0; break;
-      default:        va = a.RANK; vb = b.RANK;
-    }
-    return sortAsc ? va - vb : vb - va;
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const team = document.getElementById('teamFilter').value;
+  const [sortKey, sortDir] = document.getElementById('sortSelect').value.split('-');
+  let f = appData.players.filter(p => {
+    if (team && p.team !== team) return false;
+    if (search && !p.player.toLowerCase().includes(search) && !p.team.toLowerCase().includes(search)) return false;
+    return true;
   });
-
-  // Render
-  const tbody = document.getElementById('tbody');
-  tbody.innerHTML = '';
-  const maxScore = filtered.length > 0 ? Math.max(...filtered.map(p => p.DEF_SCORE)) : 35;
-  for (let idx = 0; idx < filtered.length; idx++) {
-    const p = filtered[idx];
-    const rank = idx + 1;
-    const rankClass = rank <= 5 ? 'top5' : rank <= 15 ? 'top15' : '';
-    const barW = Math.round((p.DEF_SCORE / maxScore) * 80);
-    const dfgDiff = p.PCT_PLUSMINUS !== null ? (p.PCT_PLUSMINUS * 100) : null;
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="rank ${rankClass}">${rank}</td>
-      <td class="player">${p.PLAYER}</td>
-      <td class="team">${p.TEAM}</td>
-      <td class="score">${p.DEF_SCORE.toFixed(1)}<span class="score-bar" style="width:${barW}px"></span></td>
-      <td class="num">${p.STL_PG.toFixed(2)}</td>
-      <td class="num">${p.BLK_PG.toFixed(2)}</td>
-      <td class="num">${p.DEFLECTIONS_PG.toFixed(1)}</td>
-      <td class="num">${p.CONTESTED_SHOTS_PG.toFixed(1)}</td>
-      <td class="num">${p.D_FG_PCT !== null ? (p.D_FG_PCT * 100).toFixed(1) + '%' : '—'}</td>
-      <td class="num ${dfgDiff !== null ? (dfgDiff < 0 ? 'good' : 'bad') : ''}">${dfgDiff !== null ? (dfgDiff >= 0 ? '+' : '') + dfgDiff.toFixed(1) + '%' : '—'}</td>
-      <td class="num">${p.DEF_RATING !== null ? p.DEF_RATING.toFixed(1) : '—'}</td>
-      <td class="num">${p.GP}</td>
-      <td class="num">${p.MPG.toFixed(1)}</td>
-      <td class="num">${p.MPG > 0 ? (p.DEF_SCORE / p.MPG).toFixed(2) : '—'}</td>
-    `;
-    // Tooltip on hover
-    tr.addEventListener('mouseenter', e => showTooltip(e, p));
-    tr.addEventListener('mousemove', e => moveTooltip(e));
-    tr.addEventListener('mouseleave', hideTooltip);
-    tbody.appendChild(tr);
-  }
-
-  // Update header sort indicators
-  document.querySelectorAll('thead th').forEach(th => {
-    th.classList.remove('sorted-asc', 'sorted-desc');
-    if (th.dataset.col === sortCol) {
-      th.classList.add(sortAsc ? 'sorted-asc' : 'sorted-desc');
-    }
+  const dir = sortDir==='desc'?-1:1;
+  f.sort((a,b) => {
+    const av = a[sortKey], bv = b[sortKey];
+    if (av === null && bv === null) return 0;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    return (av - bv) * dir;
   });
+  renderTable(f);
 }
 
-// Column sort
-document.querySelectorAll('thead th').forEach(th => {
-  th.addEventListener('click', () => {
-    const col = th.dataset.col;
-    if (sortCol === col) {
-      sortAsc = !sortAsc;
-    } else {
-      sortCol = col;
-      // Default sort directions
-      sortAsc = ['player', 'team', 'dfgpct', 'dfgdiff', 'drtg'].includes(col);
+async function init() {
+  try {
+    const [res, cRes] = await Promise.all([
+      fetch(RATINGS_URL),
+      fetch(CONTRACT_URL)
+    ]);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const ratingsRows = (await res.json()).values || [];
+    const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
+
+    // Fetch defensive data (sequential to avoid 429)
+    let defData = null;
+    try {
+      console.log('DEF: Starting defensive pipeline...');
+      const tabKeys = Object.keys(DEF_TABS);
+      const tabResults = {};
+      for (let i = 0; i < tabKeys.length; i++) {
+        const tabName = DEF_TABS[tabKeys[i]];
+        console.log('DEF: fetch ' + (i+1) + '/' + tabKeys.length + ': "' + tabName + '"');
+        tabResults[tabKeys[i]] = await fetchDefTab(tabName);
+        console.log('DEF: ✓ ' + tabName + ': ' + (tabResults[tabKeys[i]].values?.length || 0) + ' rows');
+        if (i < tabKeys.length - 1) await new Promise(function(r) { setTimeout(r, 400); });
+      }
+      const sheets = {};
+      for (const k of tabKeys) sheets[k] = parseDefSheet(tabResults[k]);
+      const liveScores = computeLiveDefScores(sheets.trad, sheets.adv, sheets.hustle, sheets.defTrk, sheets.teamAdv);
+      const histScores = parseDefHistory(sheets.defHist);
+      defData = { liveScores, histScores };
+      console.log('DEF: Loaded ' + Object.keys(liveScores).length + ' live, ' + Object.keys(histScores).length + ' history');
+    } catch (defErr) {
+      console.log('DEF: Failed (non-fatal):', defErr.message);
     }
+
+    appData = processData(ratingsRows, contractRows, defData);
+
+    document.getElementById('loadingArea').style.display = 'none';
+    document.getElementById('tableContainer').style.display = 'block';
+    document.getElementById('searchInput').disabled = false;
+    document.getElementById('teamFilter').disabled = false;
+    document.getElementById('sortSelect').disabled = false;
+
+    buildStats(appData);
+    buildTeams(appData);
     update();
-  });
-});
 
-// ═══════════════════════════════════════════════════════
-// TOOLTIP
-// ═══════════════════════════════════════════════════════
-function showTooltip(e, p) {
-  const tt = document.getElementById('tooltip');
-  const archLabel = p.PERIM_W > 0.6 ? 'Perimeter' : p.PERIM_W <= 0.4 ? 'Interior' : 'Mixed';
-  const teamRank = p.TEAM_DEF_RANK ? `#${p.TEAM_DEF_RANK}` : '—';
-  const teamDrtg = p.TEAM_DEF_RATING ? p.TEAM_DEF_RATING.toFixed(1) : '—';
-  tt.innerHTML = `
-    <div class="tp-name">${p.PLAYER} · ${p.TEAM}</div>
-    <div class="tp-row"><span class="tp-label">Archetype</span><span class="tp-val">${archLabel} (${(p.PERIM_W * 100).toFixed(0)}% perim)</span></div>
-    <div class="tp-row"><span class="tp-label">Def Score</span><span class="tp-val">${p.DEF_SCORE.toFixed(1)} / 100</span></div>
-    <div class="tp-row"><span class="tp-label">Base Raw</span><span class="tp-val">${p.BASE_RAW.toFixed(1)}</span></div>
-    <div class="tp-row"><span class="tp-label">Anchor Bonus</span><span class="tp-val">${p.ANCHOR_BONUS > 0.1 ? '+' + p.ANCHOR_BONUS.toFixed(1) : 'None'}</span></div>
-    <div class="tp-row"><span class="tp-label">Team Defense</span><span class="tp-val">${teamRank} (${teamDrtg} DRTG)</span></div>
-    <div class="tp-row"><span class="tp-label">Charges / Loose Balls</span><span class="tp-val">${p.CHARGES_DRAWN_PG.toFixed(2)} / ${p.LOOSE_BALLS_RECOVERED_PG.toFixed(2)} per game</span></div>
-  `;
-  tt.style.display = 'block';
-  moveTooltip(e);
+    document.getElementById('searchInput').addEventListener('input', update);
+    document.getElementById('teamFilter').addEventListener('change', update);
+    document.getElementById('sortSelect').addEventListener('change', update);
+    document.getElementById('snapshotBtn').disabled = false;
+    document.getElementById('refreshBtn').disabled = false;
+    document.getElementById('snapshotBtn').addEventListener('click', takeSnapshot);
+    document.getElementById('refreshBtn').addEventListener('click', refreshData);
+    document.getElementById('clearSnapBtn').addEventListener('click', clearSnapshot);
+  } catch(err) {
+    document.getElementById('loadingArea').innerHTML =
+      `<div class="error-msg"><p>⚠️ Failed to fetch data: ${err.message}</p><p style="color:var(--text-muted);margin-top:0.5rem;font-size:0.85rem;">Make sure the Google Sheet is published: File → Share → Publish to web → Entire Document</p></div>`;
+  }
 }
-
-function moveTooltip(e) {
-  const tt = document.getElementById('tooltip');
-  const x = Math.min(e.clientX + 14, window.innerWidth - 340);
-  const y = Math.min(e.clientY + 14, window.innerHeight - 220);
-  tt.style.left = x + 'px';
-  tt.style.top = y + 'px';
-}
-
-function hideTooltip() {
-  document.getElementById('tooltip').style.display = 'none';
-}
-
-// ═══════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════
-refreshData();
+init();
 </script>
 </body>
 </html>
