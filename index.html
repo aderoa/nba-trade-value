@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.7-DEF</span>
+      <span class="tag">v2.8-DEF</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -233,7 +233,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.7-DEF — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.8-DEF — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -706,46 +706,64 @@ function processData(rows, contractRows, defData) {
     }
   }
 
-  // Real value: 85% offensive + 15% defensive, × age multiplier × shooting penalty
-  // Soft-capped exponent: compresses elite outliers while preserving mid-tier separation
+  // Real value: full offensive TV × defensive multiplier × age × shooting
+  // Defense acts as a multiplier: avg defender = 1.0x, elite = up to ~1.15x, poor = down to ~0.85x
+  // This preserves offensive pool distribution while rewarding/penalizing defense
   function softScore(r) { const s = Math.pow(Math.max(r, 0), EXPONENT); return s / (1.0 + s / KNEE); }
 
-  // Offensive pools
+  // Offensive pools (unchanged from before)
   const totalAdjWM = roster.reduce((s,p) => s + softScore(p.watermark), 0);
   const totalAdjRAT = roster.reduce((s,p) => s + softScore(p.rat365adj), 0);
 
-  // Defensive pools (same soft-cap curve)
-  const totalAdjDefWM = roster.reduce((s,p) => s + softScore(p.defWatermark), 0);
-  const totalAdjDef365 = roster.reduce((s,p) => s + softScore(p.def365), 0);
-  const hasDefense = totalAdjDefWM > 0 || totalAdjDef365 > 0;
-  console.log(`=== DEFENSE BLEND: hasDefense=${hasDefense}, totalAdjDefWM=${totalAdjDefWM.toFixed(1)}, totalAdjDef365=${totalAdjDef365.toFixed(1)}, seasonProgress=${seasonProgress.toFixed(2)} ===`);
+  // Compute defensive composite per player (85% defWM + 15% def365)
+  const hasDefense = roster.some(p => p.defWatermark > 0 || p.def365 > 0);
   
-  // Log sample players' defensive data
-  const samplePlayers = roster.slice(0, 5);
-  for (const p of samplePlayers) {
-    console.log(`  ${p.player}: defWM=${p.defWatermark.toFixed(1)}, def365=${p.def365.toFixed(1)}`);
+  if (hasDefense) {
+    // Each player's composite defensive score
+    for (const p of roster) {
+      p.defComposite = DEF_WM_WEIGHT * p.defWatermark + DEF_365_WEIGHT * p.def365;
+    }
+    // Pool average (only players with defensive data)
+    const withDef = roster.filter(p => p.defComposite > 0);
+    const avgDef = withDef.length > 0 ? withDef.reduce((s,p) => s + p.defComposite, 0) / withDef.length : 1;
+    console.log('=== DEFENSE MULT: avgDef=' + avgDef.toFixed(2) + ', players with def=' + withDef.length + ', seasonProgress=' + seasonProgress.toFixed(2) + ' ===');
+    
+    // Defensive multiplier: centered at 1.0 for average, scaled by DEF_OVERALL_WEIGHT
+    for (const p of roster) {
+      if (p.defComposite > 0) {
+        // How far above/below average (as ratio)
+        const defRatio = p.defComposite / avgDef;
+        // Multiplier: 1.0 + weight × (ratio - 1.0)
+        // With DEF_OVERALL_WEIGHT=0.15: elite (2x avg) → 1.15x, poor (0.5x avg) → 0.925x
+        p.defMult = 1.0 + DEF_OVERALL_WEIGHT * (defRatio - 1.0);
+        // Clamp to reasonable range
+        p.defMult = Math.max(0.85, Math.min(1.20, p.defMult));
+      } else {
+        p.defMult = 1.0; // No defensive data → neutral
+      }
+    }
+    
+    // Log sample players
+    const sorted = [...roster].sort((a,b) => b.defComposite - a.defComposite);
+    for (const p of sorted.slice(0, 5)) {
+      console.log('  DEF top: ' + p.player + ': composite=' + p.defComposite.toFixed(1) + ', mult=' + p.defMult.toFixed(3));
+    }
+    for (const p of sorted.slice(-3)) {
+      console.log('  DEF low: ' + p.player + ': composite=' + p.defComposite.toFixed(1) + ', mult=' + p.defMult.toFixed(3));
+    }
+  } else {
+    for (const p of roster) { p.defMult = 1.0; p.defComposite = 0; }
   }
 
   for (const p of roster) {
-    // Offensive TV (internal 85/15 WM/RAT blend)
+    // Offensive TV (internal 85/15 WM/RAT blend — full pool, not reduced)
     const tvWM = (softScore(p.watermark) / totalAdjWM) * totalSalaryPool;
     const tvRAT = (softScore(p.rat365adj) / totalAdjRAT) * totalSalaryPool;
     const offTV = WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT;
 
-    if (hasDefense) {
-      // Defensive TV (internal 85/15 defWM/def365 blend)
-      const tvDefWM = totalAdjDefWM > 0 ? (softScore(p.defWatermark) / totalAdjDefWM) * totalSalaryPool : 0;
-      const tvDef365 = totalAdjDef365 > 0 ? (softScore(p.def365) / totalAdjDef365) * totalSalaryPool : 0;
-      const defTV = DEF_WM_WEIGHT * tvDefWM + DEF_365_WEIGHT * tvDef365;
-
-      // Overall blend: 85% offensive + 15% defensive
-      p.tvPreAge = OFF_OVERALL_WEIGHT * offTV + DEF_OVERALL_WEIGHT * defTV;
-      p.defComponent = defTV;
-    } else {
-      // No defensive data: fall back to pure offensive
-      p.tvPreAge = offTV;
-      p.defComponent = 0;
-    }
+    // Apply defensive multiplier
+    p.tvPreAge = offTV * p.defMult;
+    p.defComponent = offTV * (p.defMult - 1.0); // How much defense added/removed
 
     // Shooting penalty: decrease by (value × 100)%
     p.shootingPenalty = (shootingMap[p.player] || 0) * 2;
@@ -980,7 +998,7 @@ async function fetchDefTab(tab, retries) {
 }
 
 async function refreshData() {
-  console.log('=== Real Value v2.7-DEF — refreshData starting ===');
+  console.log('=== Real Value v2.8-DEF — refreshData starting ===');
   console.log('DEF_TABS defined?', typeof DEF_TABS, DEF_TABS ? Object.keys(DEF_TABS) : 'UNDEFINED');
   console.log('defTabURL defined?', typeof defTabURL);
   const btn = document.getElementById('refreshBtn');
@@ -1118,7 +1136,7 @@ function renderTable(players) {
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
       <td class="col-rank ${rankCls(p.rank)}">${p.rank}${s ? rankDelta(p.rank, s.rank) : ''}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
-      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.defWatermark > 0 || p.def365 > 0 ? `<br><span class="tt-label">Def WM:</span> <span class="tt-val">${p.defWatermark.toFixed(1)}</span><br><span class="tt-label">Def 365:</span> <span class="tt-val">${p.def365.toFixed(1)}</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
+      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.defMult !== 1.0 ? `<br><span class="tt-label">Def mult:</span> <span class="tt-val" style="color:${p.defMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">×${p.defMult.toFixed(3)}</span> <span class="tt-label">(${p.defComposite.toFixed(1)} pts)</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}${s ? deltaHTML(p.rat365, s.rat365, false) : ''}</td>
       <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}${s ? deltaHTML(p.watermark, s.watermark, false) : ''}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
