@@ -243,6 +243,26 @@ const CONTRACT_TAB = 'Sheet6';
 const SHEETS_API = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values`;
 const RATINGS_URL = `${SHEETS_API}/${RATINGS_TAB}?key=${API_KEY}`;
 const CONTRACT_URL = `${SHEETS_API}/${CONTRACT_TAB}?key=${API_KEY}`;
+
+// ═══ DEFENSIVE DATA SOURCE ═══
+// Season Stats sheet for live defensive computation + history
+const STATS_SHEET_ID = '1JH2FUBIyQ1zEHzZBxgP8vHBZ7d8EtP5-fSVG3zMgCgg';
+const STATS_API = `https://sheets.googleapis.com/v4/spreadsheets/${STATS_SHEET_ID}/values`;
+const DEF_TABS = {
+  trad:    'Player Traditional Totals',
+  adv:     'Player Advanced',
+  hustle:  'Player Hustle',
+  defTrk:  'Def_Tracking_Overall',
+  teamAdv: 'Team Advanced',
+  defHist: 'Defensive History',
+};
+function defTabURL(tab) { return `${STATS_API}/${encodeURIComponent(tab)}?key=${API_KEY}`; }
+
+// Defensive blend weights (mirrors offensive structure)
+const DEF_OVERALL_WEIGHT = 0.15;  // 15% of total Real Value
+const OFF_OVERALL_WEIGHT = 0.85;  // 85% of total Real Value
+const DEF_WM_WEIGHT = 0.85;      // Within defense: 85% watermark
+const DEF_365_WEIGHT = 0.15;     // Within defense: 15% def-365
 const EXPONENT = 3.2;
 const KNEE = 14000; // Soft-cap: score = r^EXP / (1 + r^EXP / KNEE)
 const WM_WEIGHT = 0.85;
@@ -310,7 +330,183 @@ function parseCSV(text) {
   return rows;
 }
 
-function processData(rows, contractRows) {
+// ═══════════════════════════════════════════════════════
+// DEFENSIVE SCORE COMPUTATION
+// ═══════════════════════════════════════════════════════
+
+// Parse Season Stats sheet (metadata row, possible blank, headers, data)
+function parseDefSheet(data) {
+  if (!data.values || data.values.length < 2) return { headers: [], rows: [] };
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(data.values.length, 5); i++) {
+    const row = data.values[i];
+    const first = (row[0] || '').trim();
+    if (first.toLowerCase().startsWith('season') || first.includes('Updated')) continue;
+    if (row.filter(c => (c || '').trim() !== '').length < 3) continue;
+    headerIdx = i; break;
+  }
+  if (headerIdx < 0) return { headers: [], rows: [] };
+  const headers = data.values[headerIdx].map(h => (h || '').trim());
+  const rows = data.values.slice(headerIdx + 1).map(r => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; });
+    return obj;
+  });
+  return { headers, rows };
+}
+
+function defResolve(row, ...keys) {
+  for (const k of keys) { if (row[k] !== undefined && row[k] !== '') return row[k]; }
+  return '';
+}
+function defNum(v) { if (v === undefined || v === null || v === '') return null; const n = parseFloat(String(v).replace(/,/g,'')); return isNaN(n) ? null : n; }
+
+// Archetype sigmoid
+function perimWeight(blkPg) { return 1.0 / (1.0 + Math.exp(3.0 * (blkPg - 1.0))); }
+
+const DEF_INTERIOR = {
+  'PCT_PLUSMINUS':{w:22,d:-1},'BLK_PG':{w:22,d:1},'DEF_RATING':{w:14,d:-1},
+  'NET_RATING':{w:10,d:1},'D_FG_PCT':{w:10,d:-1},'CONTESTED_SHOTS_PG':{w:8,d:1},
+  'STL_PG':{w:5,d:1},'DEFLECTIONS_PG':{w:5,d:1},'REB_PG':{w:4,d:1},
+};
+const DEF_PERIMETER = {
+  'STL_PG':{w:22,d:1},'DEFLECTIONS_PG':{w:16,d:1},'PF_PG':{w:8,d:1},
+  'CHARGES_DRAWN_PG':{w:6,d:1},'PCT_PLUSMINUS':{w:12,d:-1},'NET_RATING':{w:8,d:1},
+  'W':{w:8,d:1},'D_FG_PCT':{w:6,d:-1},'DEF_RATING':{w:6,d:-1},
+  'MPG':{w:4,d:1},'LOOSE_BALLS_RECOVERED_PG':{w:4,d:1},
+};
+const DEF_ALL_FEATS = new Set([...Object.keys(DEF_INTERIOR), ...Object.keys(DEF_PERIMETER)]);
+
+function computeLiveDefScores(tradSheet, advSheet, hustleSheet, defTrkSheet, teamAdvSheet) {
+  // Build team ID→abbreviation + team defense map
+  const idToAbbr = {};
+  for (const r of tradSheet.rows) {
+    const abbr = defResolve(r,'TEAM_ABBREVIATION','TEAM_ABB').trim();
+    const id = defResolve(r,'TEAM_ID').trim();
+    if (abbr && id) idToAbbr[id] = abbr;
+  }
+  const teamDefMap = {};
+  const tRows = teamAdvSheet.rows.map(r => ({
+    team: idToAbbr[defResolve(r,'TEAM_ID').trim()] || '',
+    drtg: defNum(defResolve(r,'DEF_RATING','DRTG'))
+  })).filter(r => r.team && r.drtg !== null && r.drtg < 999);
+  tRows.sort((a,b) => a.drtg - b.drtg);
+  tRows.forEach((t,i) => { teamDefMap[t.team] = { drtg: t.drtg, rank: i+1 }; });
+
+  // Lookup maps
+  function buildLookup(rows) {
+    const map = {};
+    for (const r of rows) {
+      const n = defResolve(r,'PLAYER_NAME','PLAYER').trim();
+      const t = defResolve(r,'TEAM_ABBREVIATION','TEAM_ABB','PLAYER_LAST_TEAM_ABBREVIATION').trim();
+      if (n) { map[n+'|'+t] = r; if (!map[n]) map[n] = r; }
+    }
+    return map;
+  }
+  function lookup(m, name, team) { return m[name+'|'+team] || m[name] || {}; }
+
+  const advMap = buildLookup(advSheet.rows);
+  const hustleMap = buildLookup(hustleSheet.rows);
+  const defTrkMap = buildLookup(defTrkSheet.rows);
+
+  // Build player array
+  const players = [];
+  for (const r of tradSheet.rows) {
+    const name = defResolve(r,'PLAYER_NAME','PLAYER').trim();
+    const team = defResolve(r,'TEAM_ABBREVIATION','TEAM_ABB').trim();
+    if (!name || !team) continue;
+    const gp = defNum(defResolve(r,'GP')) || 0;
+    const min = defNum(defResolve(r,'MIN')) || 0;
+    const mpg = gp > 0 ? min / gp : 0;
+    if (gp < 1) continue;
+
+    const a = lookup(advMap, name, team);
+    const h = lookup(hustleMap, name, team);
+    const d = lookup(defTrkMap, name, team);
+    const td = teamDefMap[team] || {};
+    const hGP = defNum(defResolve(h,'G','GP')) || gp;
+
+    const p = {
+      name, team, gp, MPG: mpg,
+      STL_PG: gp>0 ? (defNum(defResolve(r,'STL'))||0)/gp : 0,
+      BLK_PG: gp>0 ? (defNum(defResolve(r,'BLK'))||0)/gp : 0,
+      REB_PG: gp>0 ? (defNum(defResolve(r,'REB'))||0)/gp : 0,
+      PF_PG:  gp>0 ? (defNum(defResolve(r,'PF'))||0)/gp : 0,
+      W: defNum(defResolve(r,'W','WIN','WINS')) || 0,
+      DEF_RATING: defNum(defResolve(a,'DEF_RATING','DRTG')),
+      NET_RATING: defNum(defResolve(a,'NET_RATING','NRTG')),
+      DEFLECTIONS_PG:     hGP>0 ? (defNum(defResolve(h,'DEFLECTIONS'))||0)/hGP : 0,
+      CONTESTED_SHOTS_PG: hGP>0 ? (defNum(defResolve(h,'CONTESTED_SHOTS'))||0)/hGP : 0,
+      CHARGES_DRAWN_PG:   hGP>0 ? (defNum(defResolve(h,'CHARGES_DRAWN'))||0)/hGP : 0,
+      LOOSE_BALLS_RECOVERED_PG: hGP>0 ? (defNum(defResolve(h,'LOOSE_BALLS_RECOVERED'))||0)/hGP : 0,
+      D_FG_PCT: defNum(defResolve(d,'D_FG_PCT')),
+      PCT_PLUSMINUS: defNum(defResolve(d,'PCT_PLUSMINUS')),
+      TEAM_DRTG: td.drtg || null, TEAM_RANK: td.rank || null,
+    };
+    p.PERIM_W = perimWeight(p.BLK_PG);
+    if (p.DEF_RATING === null && p.D_FG_PCT === null) continue;
+    players.push(p);
+  }
+  if (players.length === 0) return {};
+
+  // Z-scores
+  const feats = [...DEF_ALL_FEATS];
+  const means = {}, stds = {};
+  for (const f of feats) {
+    const vals = players.map(p => p[f]).filter(v => v !== null && !isNaN(v));
+    const n = vals.length; if (n===0) { means[f]=0; stds[f]=1; continue; }
+    const mean = vals.reduce((a,b)=>a+b,0)/n;
+    means[f] = mean; stds[f] = Math.sqrt(vals.reduce((a,v)=>a+(v-mean)**2,0)/n) || 1;
+  }
+  for (const p of players) {
+    for (const f of feats) p[f+'_z'] = (p[f]!==null && !isNaN(p[f])) ? (p[f]-means[f])/stds[f] : 0;
+  }
+
+  // Composite
+  for (const p of players) {
+    let intS=0; for (const [f,{w,d}] of Object.entries(DEF_INTERIOR)) intS += w*d*(p[f+'_z']||0);
+    let perS=0; for (const [f,{w,d}] of Object.entries(DEF_PERIMETER)) perS += w*d*(p[f+'_z']||0);
+    p.BASE_RAW = p.PERIM_W * perS + (1-p.PERIM_W) * intS;
+  }
+
+  // Anchor bonus
+  const medWins = (() => { const s = players.map(p=>p.W).sort((a,b)=>a-b); const m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; })();
+  for (const p of players) {
+    p.ANCHOR = 0;
+    const rk = p.TEAM_RANK; if (!rk || rk > 15) continue;
+    const tf = rk<=5?1.0:rk<=10?0.5:0.25;
+    const mf = Math.max(0,Math.min(1,(p.MPG-25)/9));
+    let sf=0.5; if (p.TEAM_DRTG && p.DEF_RATING) sf=Math.max(0.15,Math.min(1,0.5+(p.TEAM_DRTG-p.DEF_RATING)/8));
+    const wf = Math.max(0.3,Math.min(1,0.5+(p.W-medWins)/25));
+    p.ANCHOR = 18 * tf * mf * sf * wf;
+  }
+
+  // Organic score
+  for (const p of players) p.DEF_SCORE = Math.max(0, (p.BASE_RAW + p.ANCHOR) * 0.12 + 15);
+
+  // Return map: playerName → score
+  const result = {};
+  for (const p of players) result[p.name] = p.DEF_SCORE;
+  return result;
+}
+
+function parseDefHistory(histSheet) {
+  // Returns { playerName: [{year: '2024-25', score: 28.5, gp: 72}, ...] }
+  const result = {};
+  for (const r of histSheet.rows) {
+    const name = (r.PLAYER || '').trim();
+    const season = (r.SEASON || '').trim();
+    const score = parseFloat(r.DEF_SCORE);
+    const gp = parseInt(r.GP) || 0;
+    if (!name || !season || isNaN(score)) continue;
+    if (!result[name]) result[name] = [];
+    result[name].push({ year: season, score, gp });
+  }
+  return result;
+}
+
+function processData(rows, contractRows, defData) {
+  // defData = { liveScores: {playerName: defScore}, histScores: {playerName: [{year, score, gp}]} }
   const dataRows = rows.slice(1);
   const roster = [], historical = [];
   let todayStr = null;
@@ -459,15 +655,90 @@ function processData(rows, contractRows) {
     }
   }
 
-  // Real value: 85/15 blend × age multiplier × shooting penalty, then renormalize to pool
+  // ═══ DEFENSIVE WATERMARK + DEF365 ═══
+  // Mirrors offensive structure: time-decay weighted historical + current blend
+  const DEF_SEASON_WEIGHT = {'2024-25':0.6,'2023-24':0.36,'2022-23':0.216,'2021-22':0.1296};
+  
+  // Season progress for def365: weight current vs last season by days elapsed
+  // NBA season roughly Oct 22 → Apr 13 ≈ 173 days
+  const SEASON_START = new Date(2025, 9, 22); // Oct 22, 2025
+  const SEASON_DAYS = 173;
+  const daysSinceStart = Math.max(0, (today - SEASON_START) / (24*60*60*1000));
+  const seasonProgress = Math.min(1.0, daysSinceStart / SEASON_DAYS);
+
+  const liveDefScores = defData ? defData.liveScores || {} : {};
+  const histDefScores = defData ? defData.histScores || {} : {};
+
+  // Build normalized name lookup for defense (handles NBA vs HH naming)
+  function normName(n) { return n.toLowerCase().replace(/[^a-z]/g, ''); }
+  const liveDefNorm = {};
+  for (const [k,v] of Object.entries(liveDefScores)) liveDefNorm[normName(k)] = v;
+  const histDefNorm = {};
+  for (const [k,v] of Object.entries(histDefScores)) histDefNorm[normName(k)] = v;
+
+  function findLiveDef(name) { return liveDefScores[name] || liveDefNorm[normName(name)] || 0; }
+  function findHistDef(name) { return histDefScores[name] || histDefNorm[normName(name)] || []; }
+
+  for (const p of roster) {
+    // Defensive watermark: time-decay weighted historical scores
+    const hist = findHistDef(p.player);
+    let defWmNum = 0, defWmDen = 0;
+    for (const h of hist) {
+      const w = DEF_SEASON_WEIGHT[h.year] || 0;
+      if (w <= 0 || h.gp <= 0) continue;
+      defWmNum += h.score * w * h.gp;
+      defWmDen += w * h.gp;
+    }
+    p.defWatermark = defWmDen > 0 ? defWmNum / defWmDen : 0;
+
+    // Defensive 365: blend live (2025-26) + last season (2024-25) by season progress
+    const liveDef = findLiveDef(p.player);
+    const lastSeason = hist.find(h => h.year === '2024-25');
+    const lastDef = lastSeason ? lastSeason.score : 0;
+    // If we have live data: weight by progress. If no live data: use last season only
+    if (liveDef > 0 && lastDef > 0) {
+      p.def365 = seasonProgress * liveDef + (1 - seasonProgress) * lastDef;
+    } else if (liveDef > 0) {
+      p.def365 = liveDef;
+    } else {
+      p.def365 = lastDef;
+    }
+  }
+
+  // Real value: 85% offensive + 15% defensive, × age multiplier × shooting penalty
   // Soft-capped exponent: compresses elite outliers while preserving mid-tier separation
   function softScore(r) { const s = Math.pow(Math.max(r, 0), EXPONENT); return s / (1.0 + s / KNEE); }
+
+  // Offensive pools
   const totalAdjWM = roster.reduce((s,p) => s + softScore(p.watermark), 0);
   const totalAdjRAT = roster.reduce((s,p) => s + softScore(p.rat365adj), 0);
+
+  // Defensive pools (same soft-cap curve)
+  const totalAdjDefWM = roster.reduce((s,p) => s + softScore(p.defWatermark), 0);
+  const totalAdjDef365 = roster.reduce((s,p) => s + softScore(p.def365), 0);
+  const hasDefense = totalAdjDefWM > 0 || totalAdjDef365 > 0;
+
   for (const p of roster) {
+    // Offensive TV (internal 85/15 WM/RAT blend)
     const tvWM = (softScore(p.watermark) / totalAdjWM) * totalSalaryPool;
     const tvRAT = (softScore(p.rat365adj) / totalAdjRAT) * totalSalaryPool;
-    p.tvPreAge = WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT;
+    const offTV = WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT;
+
+    if (hasDefense) {
+      // Defensive TV (internal 85/15 defWM/def365 blend)
+      const tvDefWM = totalAdjDefWM > 0 ? (softScore(p.defWatermark) / totalAdjDefWM) * totalSalaryPool : 0;
+      const tvDef365 = totalAdjDef365 > 0 ? (softScore(p.def365) / totalAdjDef365) * totalSalaryPool : 0;
+      const defTV = DEF_WM_WEIGHT * tvDefWM + DEF_365_WEIGHT * tvDef365;
+
+      // Overall blend: 85% offensive + 15% defensive
+      p.tvPreAge = OFF_OVERALL_WEIGHT * offTV + DEF_OVERALL_WEIGHT * defTV;
+      p.defComponent = defTV;
+    } else {
+      // No defensive data: fall back to pure offensive
+      p.tvPreAge = offTV;
+      p.defComponent = 0;
+    }
+
     // Shooting penalty: decrease by (value × 100)%
     p.shootingPenalty = (shootingMap[p.player] || 0) * 2;
     p.shootingMult = 1 - p.shootingPenalty;
@@ -688,6 +959,7 @@ async function refreshData() {
   btn.textContent = '⏳ Loading...';
   btn.disabled = true;
   try {
+    // Fetch offensive data (existing)
     const [res, cRes] = await Promise.all([
       fetch(RATINGS_URL),
       fetch(CONTRACT_URL)
@@ -695,12 +967,54 @@ async function refreshData() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ratingsRows = (await res.json()).values || [];
     const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
-    appData = processData(ratingsRows, contractRows);
+
+    // Fetch defensive data (sequential to avoid 429)
+    let defData = null;
+    try {
+      btn.textContent = '⏳ Defense...';
+      async function fetchDefTab(tab, retries = 3) {
+        for (let attempt = 0; attempt < retries; attempt++) {
+          const r = await fetch(defTabURL(tab));
+          if (r.ok) return r.json();
+          if (r.status === 429) {
+            await new Promise(res => setTimeout(res, (attempt+1)*2000));
+            continue;
+          }
+          throw new Error(`HTTP ${r.status} for ${tab}`);
+        }
+        throw new Error(`Retries exhausted for ${tab}`);
+      }
+
+      const tabKeys = Object.keys(DEF_TABS);
+      const tabResults = {};
+      for (let i = 0; i < tabKeys.length; i++) {
+        tabResults[tabKeys[i]] = await fetchDefTab(DEF_TABS[tabKeys[i]]);
+        if (i < tabKeys.length - 1) await new Promise(r => setTimeout(r, 400));
+      }
+
+      const sheets = {};
+      for (const k of tabKeys) sheets[k] = parseDefSheet(tabResults[k]);
+
+      // Compute live 2025-26 defensive scores
+      const liveScores = computeLiveDefScores(sheets.trad, sheets.adv, sheets.hustle, sheets.defTrk, sheets.teamAdv);
+
+      // Parse historical defensive scores
+      const histScores = parseDefHistory(sheets.defHist);
+
+      defData = { liveScores, histScores };
+      console.log(`Defense loaded: ${Object.keys(liveScores).length} live scores, ${Object.keys(histScores).length} players with history`);
+    } catch (defErr) {
+      console.warn('Defensive data fetch failed (non-fatal):', defErr.message);
+      // Continue without defense — formula falls back to pure offensive
+    }
+
+    appData = processData(ratingsRows, contractRows, defData);
     buildStats(appData);
     update();
     btn.textContent = '✅ Updated';
     setTimeout(() => { btn.textContent = '🔄 Refresh'; }, 1500);
   } catch(err) {
+    console.error('Refresh error:', err);
     btn.textContent = '❌ Error';
     setTimeout(() => { btn.textContent = '🔄 Refresh'; }, 2000);
   }
@@ -757,7 +1071,7 @@ function renderTable(players) {
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
       <td class="col-rank ${rankCls(p.rank)}">${p.rank}${s ? rankDelta(p.rank, s.rank) : ''}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
-      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
+      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.defWatermark > 0 || p.def365 > 0 ? `<br><span class="tt-label">Def WM:</span> <span class="tt-val">${p.defWatermark.toFixed(1)}</span><br><span class="tt-label">Def 365:</span> <span class="tt-val">${p.def365.toFixed(1)}</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}${s ? deltaHTML(p.rat365, s.rat365, false) : ''}</td>
       <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}${s ? deltaHTML(p.watermark, s.watermark, false) : ''}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
