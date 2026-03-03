@@ -996,7 +996,15 @@ async function refreshData() {
       const tabKeys = Object.keys(DEF_TABS);
       const tabResults = {};
       for (let i = 0; i < tabKeys.length; i++) {
-        tabResults[tabKeys[i]] = await fetchDefTab(DEF_TABS[tabKeys[i]]);
+        const tabName = DEF_TABS[tabKeys[i]];
+        console.log(`Fetching defense tab ${i+1}/${tabKeys.length}: "${tabName}"...`);
+        try {
+          tabResults[tabKeys[i]] = await fetchDefTab(tabName);
+          console.log(`  ✓ ${tabName}: ${tabResults[tabKeys[i]].values?.length || 0} rows`);
+        } catch (tabErr) {
+          console.error(`  ✗ ${tabName} FAILED:`, tabErr.message);
+          throw tabErr;
+        }
         if (i < tabKeys.length - 1) await new Promise(r => setTimeout(r, 400));
       }
 
@@ -1023,7 +1031,9 @@ async function refreshData() {
       const sampleNames = Object.keys(histScores).slice(0,3);
       for (const n of sampleNames) console.log(`  ${n}: ${histScores[n].map(h => h.year+'='+h.score).join(', ')}`);
     } catch (defErr) {
-      console.error('Defensive data fetch failed (non-fatal):', defErr.message, defErr.stack);
+      console.error('❌ Defensive data fetch FAILED:', defErr.message);
+      console.error('Stack:', defErr.stack);
+      console.error('Check: Is Season Stats sheet shared publicly? API key valid for sheet ID:', STATS_SHEET_ID);
       // Continue without defense — formula falls back to pure offensive
     }
 
