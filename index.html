@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v3.2-DEF</span>
+      <span class="tag">v3.3-DEF</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -233,7 +233,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.2-DEF — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.3-DEF — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -861,6 +861,7 @@ function processData(rows, contractRows, defData) {
     p.contractEnd = 0;
     p.contractTV = 0;
     p.rfaYears = [];
+    p.ufaYears = [];
     p.poDeclined = false;
     p.toDeclined = false;
 
@@ -926,6 +927,24 @@ function processData(rows, contractRows, defData) {
       }
     }
 
+    // Step 4: UFA expiring projection (1 year) — player re-signs at market rate
+    // If contract ends this season (2026) and NOT an RFA, add a projected 2026-27 year
+    // at market salary → surplus ≈ $0. This dilutes high-surplus expirings (they'll walk)
+    // and softens negative-surplus expirings (bad money goes away = less risk).
+    const isExpiring = effectiveEnd <= 2026;
+    if (isExpiring && !isRFA && p.rfaYears.length === 0) {
+      const ufaYear = 2027;
+      const projCap = CAP_PROJ[ufaYear];
+      if (projCap) {
+        const projVal = Math.round(capPct * projCap);
+        // Market salary = projected value (they sign at what they're worth)
+        const marketSal = projVal;
+        const surp = 0; // By definition: value = salary in free agency
+        tvSum += surp;
+        p.ufaYears.push({ year: ufaYear, salary: marketSal, projVal, surplus: surp, status: 'UFA PROJ' });
+      }
+    }
+
     p.contractTV = Math.round(tvSum);
   }
 
@@ -951,7 +970,7 @@ function processData(rows, contractRows, defData) {
   
   // Compute TV per contract year
   for (const p of roster) {
-    const totalYears = p.contractYears.length + p.rfaYears.length;
+    const totalYears = p.contractYears.length + p.rfaYears.length + p.ufaYears.length;
     p.tvPerYear = totalYears > 0 ? Math.round(p.contractTV / totalYears) : 0;
     p.totalContractYears = totalYears;
   }
@@ -1006,7 +1025,7 @@ async function fetchDefTab(tab, retries) {
 }
 
 async function refreshData() {
-  console.log('=== Real Value v3.2-DEF — refreshData starting ===');
+  console.log('=== Real Value v3.3-DEF — refreshData starting ===');
   console.log('DEF_TABS defined?', typeof DEF_TABS, DEF_TABS ? Object.keys(DEF_TABS) : 'UNDEFINED');
   console.log('defTabURL defined?', typeof defTabURL);
   const btn = document.getElementById('refreshBtn');
@@ -1152,8 +1171,8 @@ function renderTable(players) {
       <td class="col-num col-real-value">${fmtFull$(p.tradeValue)}${s ? deltaHTML(p.uncappedTV, s.tv, false) : ''}</td>
       <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text-secondary)'}">${p.category}</td>
       <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span>${s ? deltaHTML(p.surplus, s.surplus, false) : ''}</div></td>
-      <td class="col-num wm-detail ${p.tvPerYear>0?'surplus-pos':p.tvPerYear<0?'surplus-neg':''}">${p.tvPerYear!==0 ? ((p.tvPerYear>0?'+':'')+fmt$(p.tvPerYear)) : '—'}${(p.contractYears.length || p.rfaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
-      <td class="col-num" style="font-size:0.75rem;color:var(--text-muted)">${p.contractEnd >= 2027 ? p.contractEnd : 'EXP'}${p.rfaYears.length ? ' <span style="color:var(--accent-gold)">RFA</span>' : ''}${p.poDeclined ? ' <span style="color:var(--accent)">PO↗</span>' : ''}${p.toDeclined ? ' <span style="color:var(--surplus-neg)">TO✗</span>' : ''}</td>
+      <td class="col-num wm-detail ${p.tvPerYear>0?'surplus-pos':p.tvPerYear<0?'surplus-neg':''}">${p.tvPerYear!==0 ? ((p.tvPerYear>0?'+':'')+fmt$(p.tvPerYear)) : '—'}${(p.contractYears.length || p.rfaYears.length || p.ufaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}${p.ufaYears.length ? `<br><span class="tt-label" style="color:var(--text-muted)">— UFA Projected (market rate) —</span><br>${p.ufaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val">${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
+      <td class="col-num" style="font-size:0.75rem;color:var(--text-muted)">${p.contractEnd >= 2027 ? p.contractEnd : 'EXP'}${p.rfaYears.length ? ' <span style="color:var(--accent-gold)">RFA</span>' : ''}${p.ufaYears.length ? ' <span style="color:var(--text-muted)">UFA</span>' : ''}${p.poDeclined ? ' <span style="color:var(--accent)">PO↗</span>' : ''}${p.toDeclined ? ' <span style="color:var(--surplus-neg)">TO✗</span>' : ''}</td>
     </tr>`;
   }).join('');
 }
