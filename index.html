@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v3.0-DEF</span>
+      <span class="tag">v3.1-DEF</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -236,7 +236,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.0-DEF — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.1-DEF — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -998,7 +998,7 @@ async function fetchDefTab(tab, retries) {
     var r = await fetch(url);
     if (r.ok) return r.json();
     if (r.status === 429) {
-      await new Promise(function(res) { setTimeout(res, (attempt+1)*2000); });
+      await new Promise(function(res) { setTimeout(res, (attempt+1)*3000); });
       continue;
     }
     var body = '';
@@ -1009,7 +1009,7 @@ async function fetchDefTab(tab, retries) {
 }
 
 async function refreshData() {
-  console.log('=== Real Value v3.0-DEF — refreshData starting ===');
+  console.log('=== Real Value v3.1-DEF — refreshData starting ===');
   console.log('DEF_TABS defined?', typeof DEF_TABS, DEF_TABS ? Object.keys(DEF_TABS) : 'UNDEFINED');
   console.log('defTabURL defined?', typeof defTabURL);
   const btn = document.getElementById('refreshBtn');
@@ -1035,6 +1035,7 @@ async function refreshData() {
 
     try {
       btn.textContent = '⏳ Defense...';
+      await new Promise(function(r) { setTimeout(r, 800); });
 
       const tabKeys = Object.keys(DEF_TABS);
       const tabResults = {};
@@ -1048,7 +1049,7 @@ async function refreshData() {
           console.log(`  ✗ ${tabName} FAILED:`, tabErr.message);
           throw tabErr;
         }
-        if (i < tabKeys.length - 1) await new Promise(r => setTimeout(r, 400));
+        if (i < tabKeys.length - 1) await new Promise(r => setTimeout(r, 600));
       }
 
       const sheets = {};
@@ -1192,9 +1193,11 @@ async function init() {
     const ratingsRows = (await res.json()).values || [];
     const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
 
-    // Fetch defensive data (sequential to avoid 429)
+    // Fetch defensive data (sequential with delays to avoid 429)
     let defData = null;
     try {
+      // Wait after offensive fetch to avoid rate limiting
+      await new Promise(function(r) { setTimeout(r, 800); });
       console.log('DEF: Starting defensive pipeline...');
       const tabKeys = Object.keys(DEF_TABS);
       const tabResults = {};
@@ -1203,7 +1206,7 @@ async function init() {
         console.log('DEF: fetch ' + (i+1) + '/' + tabKeys.length + ': "' + tabName + '"');
         tabResults[tabKeys[i]] = await fetchDefTab(tabName);
         console.log('DEF: ✓ ' + tabName + ': ' + (tabResults[tabKeys[i]].values?.length || 0) + ' rows');
-        if (i < tabKeys.length - 1) await new Promise(function(r) { setTimeout(r, 400); });
+        if (i < tabKeys.length - 1) await new Promise(function(r) { setTimeout(r, 600); });
       }
       const sheets = {};
       for (const k of tabKeys) sheets[k] = parseDefSheet(tabResults[k]);
