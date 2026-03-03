@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.6.2-DEF</span>
+      <span class="tag">v2.7-DEF</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -233,7 +233,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.6.2-DEF — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.7-DEF — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -962,8 +962,27 @@ function clearSnapshot() {
   update();
 }
 
+// Top-level defensive tab fetcher (used by both init and refreshData)
+async function fetchDefTab(tab, retries) {
+  var url = defTabURL(tab);
+  for (var attempt = 0; attempt < (retries || 3); attempt++) {
+    var r = await fetch(url);
+    if (r.ok) return r.json();
+    if (r.status === 429) {
+      await new Promise(function(res) { setTimeout(res, (attempt+1)*2000); });
+      continue;
+    }
+    var body = '';
+    try { body = await r.text(); } catch(e) {}
+    throw new Error('HTTP ' + r.status + ' for "' + tab + '": ' + body.slice(0,200));
+  }
+  throw new Error('Retries exhausted for "' + tab + '"');
+}
+
 async function refreshData() {
-  console.log('=== Real Value v2.6.2-DEF — refreshData starting ===');
+  console.log('=== Real Value v2.7-DEF — refreshData starting ===');
+  console.log('DEF_TABS defined?', typeof DEF_TABS, DEF_TABS ? Object.keys(DEF_TABS) : 'UNDEFINED');
+  console.log('defTabURL defined?', typeof defTabURL);
   const btn = document.getElementById('refreshBtn');
   btn.textContent = '⏳ Loading...';
   btn.disabled = true;
@@ -976,30 +995,14 @@ async function refreshData() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ratingsRows = (await res.json()).values || [];
     const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
+    
+    console.log('DEF-CHECKPOINT-1: Offensive data loaded, ratings:', ratingsRows.length, 'contracts:', contractRows.length);
 
     // Fetch defensive data (sequential to avoid 429)
     let defData = null;
     console.log('DEF: === STARTING DEFENSIVE PIPELINE ===');
     console.log('DEF: Stats sheet ID:', STATS_SHEET_ID);
     console.log('DEF: Sample URL:', defTabURL(DEF_TABS.trad));
-    
-    async function fetchDefTab(tab, retries) {
-      const url = defTabURL(tab);
-      for (let attempt = 0; attempt < (retries || 3); attempt++) {
-        console.log('DEF: fetch "' + tab + '" attempt ' + (attempt+1));
-        const r = await fetch(url);
-        console.log('DEF: "' + tab + '" → HTTP ' + r.status);
-        if (r.ok) return r.json();
-        if (r.status === 429) {
-          await new Promise(function(res) { setTimeout(res, (attempt+1)*2000); });
-          continue;
-        }
-        var body = '';
-        try { body = await r.text(); } catch(e) {}
-        throw new Error('HTTP ' + r.status + ' for "' + tab + '": ' + body.slice(0,200));
-      }
-      throw new Error('Retries exhausted for "' + tab + '"');
-    }
 
     try {
       btn.textContent = '⏳ Defense...';
@@ -1158,7 +1161,31 @@ async function init() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ratingsRows = (await res.json()).values || [];
     const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
-    appData = processData(ratingsRows, contractRows);
+
+    // Fetch defensive data (sequential to avoid 429)
+    let defData = null;
+    try {
+      console.log('DEF: Starting defensive pipeline...');
+      const tabKeys = Object.keys(DEF_TABS);
+      const tabResults = {};
+      for (let i = 0; i < tabKeys.length; i++) {
+        const tabName = DEF_TABS[tabKeys[i]];
+        console.log('DEF: fetch ' + (i+1) + '/' + tabKeys.length + ': "' + tabName + '"');
+        tabResults[tabKeys[i]] = await fetchDefTab(tabName);
+        console.log('DEF: ✓ ' + tabName + ': ' + (tabResults[tabKeys[i]].values?.length || 0) + ' rows');
+        if (i < tabKeys.length - 1) await new Promise(function(r) { setTimeout(r, 400); });
+      }
+      const sheets = {};
+      for (const k of tabKeys) sheets[k] = parseDefSheet(tabResults[k]);
+      const liveScores = computeLiveDefScores(sheets.trad, sheets.adv, sheets.hustle, sheets.defTrk, sheets.teamAdv);
+      const histScores = parseDefHistory(sheets.defHist);
+      defData = { liveScores, histScores };
+      console.log('DEF: Loaded ' + Object.keys(liveScores).length + ' live, ' + Object.keys(histScores).length + ' history');
+    } catch (defErr) {
+      console.log('DEF: Failed (non-fatal):', defErr.message);
+    }
+
+    appData = processData(ratingsRows, contractRows, defData);
 
     document.getElementById('loadingArea').style.display = 'none';
     document.getElementById('tableContainer').style.display = 'block';
