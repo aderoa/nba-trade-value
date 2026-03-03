@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v3.3-DEF</span>
+      <span class="tag">v3.4-DEF</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -233,7 +233,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.3-DEF — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.4-DEF — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -970,7 +970,7 @@ function processData(rows, contractRows, defData) {
   
   // Compute TV per contract year
   for (const p of roster) {
-    const totalYears = p.contractYears.length + p.rfaYears.length + p.ufaYears.length;
+    const totalYears = p.contractYears.length + p.ufaYears.length;
     p.tvPerYear = totalYears > 0 ? Math.round(p.contractTV / totalYears) : 0;
     p.totalContractYears = totalYears;
   }
@@ -1025,7 +1025,7 @@ async function fetchDefTab(tab, retries) {
 }
 
 async function refreshData() {
-  console.log('=== Real Value v3.3-DEF — refreshData starting ===');
+  console.log('=== Real Value v3.4-DEF — refreshData starting ===');
   console.log('DEF_TABS defined?', typeof DEF_TABS, DEF_TABS ? Object.keys(DEF_TABS) : 'UNDEFINED');
   console.log('defTabURL defined?', typeof defTabURL);
   const btn = document.getElementById('refreshBtn');
