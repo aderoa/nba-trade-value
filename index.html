@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.8-DEF</span>
+      <span class="tag">v2.9-DEF</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -233,7 +233,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.8-DEF — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.9-DEF — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -259,8 +259,8 @@ const DEF_TABS = {
 function defTabURL(tab) { return `${STATS_API}/${encodeURIComponent(tab)}?key=${API_KEY}`; }
 
 // Defensive blend weights (mirrors offensive structure)
-const DEF_OVERALL_WEIGHT = 0.15;  // 15% of total Real Value
-const OFF_OVERALL_WEIGHT = 0.85;  // 85% of total Real Value
+const DEF_OVERALL_WEIGHT = 0.25;  // Defensive multiplier strength (how much defense can shift TV)
+const OFF_OVERALL_WEIGHT = 0.85;  // (not used in multiplicative model, kept for reference)
 const DEF_WM_WEIGHT = 0.85;      // Within defense: 85% watermark
 const DEF_365_WEIGHT = 0.15;     // Within defense: 15% def-365
 const EXPONENT = 3.2;
@@ -737,7 +737,7 @@ function processData(rows, contractRows, defData) {
         // With DEF_OVERALL_WEIGHT=0.15: elite (2x avg) → 1.15x, poor (0.5x avg) → 0.925x
         p.defMult = 1.0 + DEF_OVERALL_WEIGHT * (defRatio - 1.0);
         // Clamp to reasonable range
-        p.defMult = Math.max(0.85, Math.min(1.20, p.defMult));
+        p.defMult = Math.max(0.75, Math.min(1.35, p.defMult));
       } else {
         p.defMult = 1.0; // No defensive data → neutral
       }
@@ -998,7 +998,7 @@ async function fetchDefTab(tab, retries) {
 }
 
 async function refreshData() {
-  console.log('=== Real Value v2.8-DEF — refreshData starting ===');
+  console.log('=== Real Value v2.9-DEF — refreshData starting ===');
   console.log('DEF_TABS defined?', typeof DEF_TABS, DEF_TABS ? Object.keys(DEF_TABS) : 'UNDEFINED');
   console.log('defTabURL defined?', typeof defTabURL);
   const btn = document.getElementById('refreshBtn');
