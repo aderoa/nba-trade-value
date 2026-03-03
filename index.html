@@ -118,7 +118,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>🛡️ Defensive Rankings</h1>
-      <span class="tag">v4.0 — Real Anchor</span>
+      <span class="tag">v4.1 — Real Anchor</span>
     </div>
     <div class="header-subtitle">Archetype-weighted composite score with team defense anchor bonus</div>
   </div>
@@ -738,7 +738,7 @@ function buildTeamFilter() {
 // ═══════════════════════════════════════════════════════
 // RENDERING
 // ═══════════════════════════════════════════════════════
-let sortCol = 'rank', sortAsc = true;
+let sortCol = 'rank', sortAsc = false;
 
 function update() {
   if (!appData) return;
@@ -758,7 +758,7 @@ function update() {
   filtered.sort((a, b) => {
     let va, vb;
     switch (col) {
-      case 'rank':    va = a.RANK; vb = b.RANK; break;
+      case 'rank':    va = a.DEF_SCORE; vb = b.DEF_SCORE; return sortAsc ? va - vb : vb - va;
       case 'player':  va = a.PLAYER; vb = b.PLAYER; return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
       case 'team':    va = a.TEAM; vb = b.TEAM; return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
       case 'score':   va = a.DEF_SCORE; vb = b.DEF_SCORE; break;
@@ -781,14 +781,16 @@ function update() {
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
   const maxScore = filtered.length > 0 ? Math.max(...filtered.map(p => p.DEF_SCORE)) : 35;
-  for (const p of filtered) {
-    const rankClass = p.RANK <= 5 ? 'top5' : p.RANK <= 15 ? 'top15' : '';
+  for (let idx = 0; idx < filtered.length; idx++) {
+    const p = filtered[idx];
+    const rank = idx + 1;
+    const rankClass = rank <= 5 ? 'top5' : rank <= 15 ? 'top15' : '';
     const barW = Math.round((p.DEF_SCORE / maxScore) * 80);
     const dfgDiff = p.PCT_PLUSMINUS !== null ? (p.PCT_PLUSMINUS * 100) : null;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="rank ${rankClass}">${p.RANK}</td>
+      <td class="rank ${rankClass}">${rank}</td>
       <td class="player">${p.PLAYER}</td>
       <td class="team">${p.TEAM}</td>
       <td class="score">${p.DEF_SCORE.toFixed(1)}<span class="score-bar" style="width:${barW}px"></span></td>
@@ -828,7 +830,7 @@ document.querySelectorAll('thead th').forEach(th => {
     } else {
       sortCol = col;
       // Default sort directions
-      sortAsc = ['rank', 'player', 'team', 'dfgpct', 'dfgdiff', 'drtg'].includes(col);
+      sortAsc = ['player', 'team', 'dfgpct', 'dfgdiff', 'drtg'].includes(col);
     }
     update();
   });
