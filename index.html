@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.6.1-DEF</span>
+      <span class="tag">v2.6.2-DEF</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -233,7 +233,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.6.1-DEF — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.6.2-DEF — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -963,7 +963,7 @@ function clearSnapshot() {
 }
 
 async function refreshData() {
-  console.log('=== Real Value v2.6.1-DEF — refreshData starting ===');
+  console.log('=== Real Value v2.6.2-DEF — refreshData starting ===');
   const btn = document.getElementById('refreshBtn');
   btn.textContent = '⏳ Loading...';
   btn.disabled = true;
@@ -979,31 +979,30 @@ async function refreshData() {
 
     // Fetch defensive data (sequential to avoid 429)
     let defData = null;
+    console.log('DEF: === STARTING DEFENSIVE PIPELINE ===');
+    console.log('DEF: Stats sheet ID:', STATS_SHEET_ID);
+    console.log('DEF: Sample URL:', defTabURL(DEF_TABS.trad));
+    
+    async function fetchDefTab(tab, retries) {
+      const url = defTabURL(tab);
+      for (let attempt = 0; attempt < (retries || 3); attempt++) {
+        console.log('DEF: fetch "' + tab + '" attempt ' + (attempt+1));
+        const r = await fetch(url);
+        console.log('DEF: "' + tab + '" → HTTP ' + r.status);
+        if (r.ok) return r.json();
+        if (r.status === 429) {
+          await new Promise(function(res) { setTimeout(res, (attempt+1)*2000); });
+          continue;
+        }
+        var body = '';
+        try { body = await r.text(); } catch(e) {}
+        throw new Error('HTTP ' + r.status + ' for "' + tab + '": ' + body.slice(0,200));
+      }
+      throw new Error('Retries exhausted for "' + tab + '"');
+    }
+
     try {
       btn.textContent = '⏳ Defense...';
-      
-      // Log the first URL we'll try, so we can test it manually
-      const testURL = defTabURL(DEF_TABS.trad);
-      console.log('DEF: Starting defensive fetch...');
-      console.log('DEF: Test URL =', testURL);
-      console.log('DEF: Tabs to fetch:', Object.values(DEF_TABS));
-      
-      async function fetchDefTab(tab, retries = 3) {
-        const url = defTabURL(tab);
-        for (let attempt = 0; attempt < retries; attempt++) {
-          console.log(`DEF: Fetching "${tab}" attempt ${attempt+1}...`);
-          const r = await fetch(url);
-          console.log(`DEF: "${tab}" → HTTP ${r.status}`);
-          if (r.ok) return r.json();
-          if (r.status === 429) {
-            await new Promise(res => setTimeout(res, (attempt+1)*2000));
-            continue;
-          }
-          const body = await r.text().catch(() => '');
-          throw new Error(`HTTP ${r.status} for "${tab}": ${body.slice(0,200)}`);
-        }
-        throw new Error(`Retries exhausted for "${tab}"`);
-      }
 
       const tabKeys = Object.keys(DEF_TABS);
       const tabResults = {};
