@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v3.4-DEF</span>
+      <span class="tag">v3.5-DEF</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -233,7 +233,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.4-DEF — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.5-DEF — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -985,6 +985,54 @@ function processData(rows, contractRows, defData) {
 let appData = null;
 let snapshot = null;
 
+// ═══ Daily snapshot persistence ═══
+// Auto-saves today's values to localStorage. On next load, compares against the most recent previous day.
+const RV_SNAP_PREFIX = 'rv_snap_';
+
+function todayKey() {
+  return RV_SNAP_PREFIX + new Date().toISOString().slice(0, 10); // rv_snap_2026-03-04
+}
+
+function saveDaily() {
+  if (!appData) return;
+  const data = {};
+  for (const p of appData.players) {
+    data[p.player] = { rank: p.rank, tv: p.uncappedTV, surplus: p.surplus, watermark: p.watermark, rat365: p.rat365, contractTV: p.contractTV };
+  }
+  localStorage.setItem(todayKey(), JSON.stringify(data));
+  // Prune old snapshots (keep last 7 days)
+  const keys = Object.keys(localStorage).filter(k => k.startsWith(RV_SNAP_PREFIX)).sort();
+  while (keys.length > 7) {
+    localStorage.removeItem(keys.shift());
+  }
+}
+
+function loadPreviousSnapshot() {
+  const today = new Date().toISOString().slice(0, 10);
+  const keys = Object.keys(localStorage).filter(k => k.startsWith(RV_SNAP_PREFIX)).sort().reverse();
+  for (const k of keys) {
+    const date = k.replace(RV_SNAP_PREFIX, '');
+    if (date < today) {
+      try {
+        const data = JSON.parse(localStorage.getItem(k));
+        if (data && Object.keys(data).length > 0) {
+          snapshot = data;
+          const banner = document.getElementById('snapBanner');
+          if (banner) {
+            banner.style.display = 'block';
+            banner.textContent = `Comparing vs ${date}`;
+          }
+          document.getElementById('snapshotBtn').classList.add('active');
+          document.getElementById('snapshotBtn').textContent = `📸 vs ${date}`;
+          document.getElementById('clearSnapBtn').style.display = '';
+          console.log(`Auto-loaded snapshot from ${date} (${Object.keys(data).length} players)`);
+          return;
+        }
+      } catch(e) {}
+    }
+  }
+}
+
 function takeSnapshot() {
   if (!appData) return;
   snapshot = {};
@@ -992,6 +1040,7 @@ function takeSnapshot() {
     snapshot[p.player] = { rank: p.rank, tv: p.uncappedTV, surplus: p.surplus, watermark: p.watermark, rat365: p.rat365, contractTV: p.contractTV };
   }
   document.getElementById('snapBanner').style.display = 'block';
+  document.getElementById('snapBanner').textContent = 'Comparing vs current snapshot';
   document.getElementById('snapshotBtn').classList.add('active');
   document.getElementById('snapshotBtn').textContent = '📸 Locked';
   document.getElementById('clearSnapBtn').style.display = '';
@@ -1025,7 +1074,7 @@ async function fetchDefTab(tab, retries) {
 }
 
 async function refreshData() {
-  console.log('=== Real Value v3.4-DEF — refreshData starting ===');
+  console.log('=== Real Value v3.5-DEF — refreshData starting ===');
   console.log('DEF_TABS defined?', typeof DEF_TABS, DEF_TABS ? Object.keys(DEF_TABS) : 'UNDEFINED');
   console.log('defTabURL defined?', typeof defTabURL);
   const btn = document.getElementById('refreshBtn');
@@ -1099,7 +1148,14 @@ async function refreshData() {
 
     appData = processData(ratingsRows, contractRows, defData);
     buildStats(appData);
+    
+    // Auto-load previous day's snapshot for comparison (if no manual snapshot active)
+    if (!snapshot) loadPreviousSnapshot();
+    
     update();
+    
+    // Auto-save today's values
+    saveDaily();
     
     // Show defense status
     const defStatus = defData ? `🛡️ DEF: ${Object.keys(defData.liveScores).length} live / ${Object.keys(defData.histScores).length} hist` : '⚠️ No defense';
@@ -1243,7 +1299,14 @@ async function init() {
 
     buildStats(appData);
     buildTeams(appData);
+    
+    // Auto-load previous day's snapshot for comparison
+    if (!snapshot) loadPreviousSnapshot();
+    
     update();
+    
+    // Auto-save today's values
+    saveDaily();
 
     document.getElementById('searchInput').addEventListener('input', update);
     document.getElementById('teamFilter').addEventListener('change', update);
