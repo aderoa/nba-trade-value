@@ -989,8 +989,12 @@ let snapshot = null;
 // Auto-saves today's values to localStorage. On next load, compares against the most recent previous day.
 const RV_SNAP_PREFIX = 'rv_snap_';
 
+function localDate() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
 function todayKey() {
-  return RV_SNAP_PREFIX + new Date().toISOString().slice(0, 10); // rv_snap_2026-03-04
+  return RV_SNAP_PREFIX + localDate();
 }
 
 function saveDaily() {
@@ -1008,7 +1012,7 @@ function saveDaily() {
 }
 
 function loadPreviousSnapshot() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
   const keys = Object.keys(localStorage).filter(k => k.startsWith(RV_SNAP_PREFIX)).sort().reverse();
   for (const k of keys) {
     const date = k.replace(RV_SNAP_PREFIX, '');
