@@ -130,7 +130,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v3.6-DEF</span>
+      <span class="tag">v3.8-DEF</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -157,6 +157,8 @@
     <select id="sortSelect" disabled>
       <option value="uncappedTV-desc">Real Value ↓</option>
       <option value="uncappedTV-asc">Real Value ↑</option>
+      <option value="rvDelta-desc">Δ Real Value ↓</option>
+      <option value="rvDelta-asc">Δ Real Value ↑</option>
       <option value="tvPerYear-desc">Trade Value ↓</option>
       <option value="tvPerYear-asc">Trade Value ↑</option>
       <option value="surplus-desc">Surplus ↓</option>
@@ -172,14 +174,12 @@
     </select>
   </div>
   <div class="filter-group" style="margin-left:auto;">
-    <button id="snapshotBtn" class="ctrl-btn" disabled>📸 Snapshot</button>
     <button id="refreshBtn" class="ctrl-btn" disabled>🔄 Refresh</button>
-    <button id="clearSnapBtn" class="ctrl-btn" style="display:none">✕ Clear</button>
   </div>
 </div>
 
 <div class="snap-banner" id="snapBanner" style="display:none">
-  <div class="snap-banner-inner">📸 Snapshot locked — update your sheet, then hit <strong>Refresh</strong> to see changes</div>
+  <div class="snap-banner-inner" id="snapBannerText"></div>
 </div>
 
 <div id="loadingArea">
@@ -234,7 +234,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.6-DEF — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.8-DEF — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -984,7 +984,8 @@ function processData(rows, contractRows, defData) {
 }
 
 let appData = null;
-let snapshot = null;
+let dailySnap = null;  // Auto-loaded from previous day — NEVER cleared by user
+let dailySnapDate = ''; // Date label for the auto-comparison
 
 // ═══ Daily snapshot persistence ═══
 // Auto-saves today's values to localStorage. On next load, compares against the most recent previous day.
@@ -1021,44 +1022,19 @@ function loadPreviousSnapshot() {
       try {
         const data = JSON.parse(localStorage.getItem(k));
         if (data && Object.keys(data).length > 0) {
-          snapshot = data;
+          dailySnap = data;
+          dailySnapDate = date;
           const banner = document.getElementById('snapBanner');
           if (banner) {
             banner.style.display = 'block';
-            banner.textContent = `Comparing vs ${date}`;
+            document.getElementById('snapBannerText').textContent = `Δ column: comparing vs ${date}`;
           }
-          document.getElementById('snapshotBtn').classList.add('active');
-          document.getElementById('snapshotBtn').textContent = `📸 vs ${date}`;
-          document.getElementById('clearSnapBtn').style.display = '';
           console.log(`Auto-loaded snapshot from ${date} (${Object.keys(data).length} players)`);
           return;
         }
       } catch(e) {}
     }
   }
-}
-
-function takeSnapshot() {
-  if (!appData) return;
-  snapshot = {};
-  for (const p of appData.players) {
-    snapshot[p.player] = { rank: p.rank, tv: p.uncappedTV, surplus: p.surplus, watermark: p.watermark, rat365: p.rat365, contractTV: p.contractTV };
-  }
-  document.getElementById('snapBanner').style.display = 'block';
-  document.getElementById('snapBanner').textContent = 'Comparing vs current snapshot';
-  document.getElementById('snapshotBtn').classList.add('active');
-  document.getElementById('snapshotBtn').textContent = '📸 Locked';
-  document.getElementById('clearSnapBtn').style.display = '';
-  update();
-}
-
-function clearSnapshot() {
-  snapshot = null;
-  document.getElementById('snapBanner').style.display = 'none';
-  document.getElementById('snapshotBtn').classList.remove('active');
-  document.getElementById('snapshotBtn').textContent = '📸 Snapshot';
-  document.getElementById('clearSnapBtn').style.display = 'none';
-  update();
 }
 
 // Top-level defensive tab fetcher (used by both init and refreshData)
@@ -1079,7 +1055,7 @@ async function fetchDefTab(tab, retries) {
 }
 
 async function refreshData() {
-  console.log('=== Real Value v3.6-DEF — refreshData starting ===');
+  console.log('=== Real Value v3.8-DEF — refreshData starting ===');
   console.log('DEF_TABS defined?', typeof DEF_TABS, DEF_TABS ? Object.keys(DEF_TABS) : 'UNDEFINED');
   console.log('defTabURL defined?', typeof defTabURL);
   const btn = document.getElementById('refreshBtn');
@@ -1155,7 +1131,7 @@ async function refreshData() {
     buildStats(appData);
     
     // Auto-load previous day's snapshot for comparison (if no manual snapshot active)
-    if (!snapshot) loadPreviousSnapshot();
+    loadPreviousSnapshot();
     
     update();
     
@@ -1195,6 +1171,7 @@ function rankDelta(cur, prev) {
 }
 
 function fmt$(n) { const a=Math.abs(n); if(a>=1e6)return(n<0?'-':'')+'$'+(a/1e6).toFixed(1)+'M'; if(a>=1e3)return(n<0?'-':'')+'$'+(a/1e3).toFixed(0)+'K'; return '$'+n.toLocaleString(); }
+function fmtK$(n) { const a=Math.abs(n); if(a>=1e6)return '$'+(a/1e6).toFixed(1)+'M'; return '$'+Math.round(a/1e3)+'K'; }
 function fmtFull$(n) { return (n<0?'-$':'$')+Math.abs(n).toLocaleString(); }
 function ratCls(r) { return r>=18?'rat-elite':r>=12?'rat-star':r>=6?'rat-solid':r>=2?'rat-avg':'rat-low'; }
 function rankCls(r) { return r<=5?'rank-top5':r<=20?'rank-top20':r<=50?'rank-top50':''; }
@@ -1221,16 +1198,15 @@ function renderTable(players) {
   document.getElementById('tableBody').innerHTML = players.map((p,i) => {
     const pct = Math.min(Math.abs(p.surplus)/maxS*50, 50);
     const bc = p.surplus>=0?'positive':'negative';
-    const s = snapshot ? snapshot[p.player] : null;
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
-      <td class="col-rank ${rankCls(p.rank)}">${p.rank}${s ? rankDelta(p.rank, s.rank) : ''}</td>
+      <td class="col-rank ${rankCls(p.rank)}">${p.rank}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
       <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.defMult !== 1.0 ? `<br><span class="tt-label">Def mult:</span> <span class="tt-val" style="color:${p.defMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">×${p.defMult.toFixed(3)}</span> <span class="tt-label">(${p.defComposite.toFixed(1)} pts)</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}</td>
       <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
       <td class="col-num col-real-value">${fmtFull$(p.tradeValue)}</td>
-      <td class="col-num">${s ? deltaHTML(p.uncappedTV, s.tv, false) : ''}</td>
+      <td class="col-num">${p.rvDelta !== 0 ? `<span class="delta ${p.rvDelta>0?'delta-up':'delta-down'}">${p.rvDelta>0?'▲':'▼'}${fmtK$(Math.abs(p.rvDelta))}</span>` : ''}</td>
       <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text-secondary)'}">${p.category}</td>
       <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span></div></td>
       <td class="col-num wm-detail ${p.tvPerYear>0?'surplus-pos':p.tvPerYear<0?'surplus-neg':''}">${p.tvPerYear!==0 ? ((p.tvPerYear>0?'+':'')+fmt$(p.tvPerYear)) : '—'}${(p.contractYears.length || p.rfaYears.length || p.ufaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}${p.ufaYears.length ? `<br><span class="tt-label" style="color:var(--text-muted)">— UFA Projected (market rate) —</span><br>${p.ufaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val">${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
@@ -1244,6 +1220,13 @@ function update() {
   const search = document.getElementById('searchInput').value.toLowerCase();
   const team = document.getElementById('teamFilter').value;
   const [sortKey, sortDir] = document.getElementById('sortSelect').value.split('-');
+  
+  // Compute rvDelta for each player from daily snapshot
+  for (const p of appData.players) {
+    const s = dailySnap ? dailySnap[p.player] : null;
+    p.rvDelta = (s && s.tv != null) ? p.uncappedTV - s.tv : 0;
+  }
+  
   let f = appData.players.filter(p => {
     if (team && p.team !== team) return false;
     if (search && !p.player.toLowerCase().includes(search) && !p.team.toLowerCase().includes(search)) return false;
@@ -1307,7 +1290,7 @@ async function init() {
     buildTeams(appData);
     
     // Auto-load previous day's snapshot for comparison
-    if (!snapshot) loadPreviousSnapshot();
+    loadPreviousSnapshot();
     
     update();
     
@@ -1317,11 +1300,8 @@ async function init() {
     document.getElementById('searchInput').addEventListener('input', update);
     document.getElementById('teamFilter').addEventListener('change', update);
     document.getElementById('sortSelect').addEventListener('change', update);
-    document.getElementById('snapshotBtn').disabled = false;
     document.getElementById('refreshBtn').disabled = false;
-    document.getElementById('snapshotBtn').addEventListener('click', takeSnapshot);
     document.getElementById('refreshBtn').addEventListener('click', refreshData);
-    document.getElementById('clearSnapBtn').addEventListener('click', clearSnapshot);
   } catch(err) {
     document.getElementById('loadingArea').innerHTML =
       `<div class="error-msg"><p>⚠️ Failed to fetch data: ${err.message}</p><p style="color:var(--text-muted);margin-top:0.5rem;font-size:0.85rem;">Make sure the Google Sheet is published: File → Share → Publish to web → Entire Document</p></div>`;
