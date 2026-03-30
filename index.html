@@ -5,123 +5,119 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NBA Real Value Rankings — Hoopsmatic</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg-primary: #0a0e17;
-    --bg-secondary: #111827;
-    --bg-card: #151d2e;
-    --bg-row-hover: #1a2540;
-    --border: #1e2d4a;
-    --text-primary: #e8ecf4;
-    --text-secondary: #8892a6;
-    --text-muted: #555f73;
-    --accent-gold: #f0b637;
-    --accent-blue: #3b82f6;
-    --accent-cyan: #22d3ee;
-    --surplus-pos: #10b981;
-    --surplus-neg: #ef4444;
-    --surplus-neutral: #6b7280;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg-primary); color: var(--text-primary); font-family: 'Source Sans 3', sans-serif; min-height: 100vh; line-height: 1.5; }
+/* === HOOPSMATIC DESIGN SYSTEM v1.0 === */
+:root {
+  --bg: #f8f9fa; --surface: #fff; --surface2: #f3f4f6;
+  --border: #e2e5e9; --text: #1a1a2e; --text2: #5a6070; --text-muted: #8892a6;
+  --accent: #3b82f6; --accent-dim: rgba(59,130,246,0.07);
+  --accent-gold: #f0b637; --accent-cyan: #0ea5e9;
+  --green: #16a34a; --red: #dc2626; --orange: #f59e0b;
+  --surplus-pos: #10b981; --surplus-neg: #ef4444; --surplus-neutral: #6b7280;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; line-height:1.5; }
+::-webkit-scrollbar{height:5px;width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
 
-  .header { background: linear-gradient(135deg, #0d1321 0%, #172040 50%, #0d1321 100%); border-bottom: 1px solid var(--border); padding: 2.5rem 2rem 2rem; position: relative; overflow: hidden; }
-  .header::before { content: ''; position: absolute; top:0;left:0;right:0;bottom:0; background: repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(59,130,246,0.03) 60px,rgba(59,130,246,0.03) 61px); pointer-events: none; }
-  .header-inner { max-width: 1400px; margin: 0 auto; position: relative; z-index: 1; }
-  .header-brand { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.25rem; }
-  .header-brand h1 { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 2rem; letter-spacing: 0.05em; text-transform: uppercase; }
-  .header-brand .tag { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent-gold); background: rgba(240,182,55,0.12); padding: 0.2em 0.6em; border-radius: 3px; letter-spacing: 0.08em; text-transform: uppercase; }
-  .header-subtitle { color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.15rem; }
+/* — Header — */
+.header { background:var(--surface); border-bottom:1px solid var(--border); padding:1.5rem 2rem 1.25rem; }
+.header::before { display:none; }
+.header-inner { max-width:1400px; margin:0 auto; display:flex; align-items:baseline; gap:0.75rem; flex-wrap:wrap; }
+.header h1, .header-brand h1 { font-weight:800; font-size:1.5rem; letter-spacing:-0.02em; color:var(--text); }
+.header .tag { font-family:'JetBrains Mono','DM Mono',monospace; font-size:0.6rem; color:var(--accent); background:var(--accent-dim); padding:0.2em 0.6em; border-radius:4px; letter-spacing:0.04em; }
+.header-subtitle { color:var(--text2); font-size:0.85rem; }
 
-  .stats-bar { max-width: 1400px; margin: -1.5rem auto 0; padding: 0 2rem; position: relative; z-index: 2; display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; }
-  .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1.1rem 1.25rem; }
-  .stat-card .label { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.3rem; }
-  .stat-card .value { font-family: 'Oswald', sans-serif; font-size: 1.5rem; font-weight: 600; }
-  .stat-card .value .unit { font-size: 0.85rem; font-weight: 400; color: var(--text-secondary); }
+/* — Stat Cards — */
+.stats-bar { max-width:1400px; margin:1rem auto 0; padding:0 2rem; display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem 1.15rem; }
+.stat-card .label { font-family:'JetBrains Mono','DM Mono',monospace; font-size:0.6rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.2rem; }
+.stat-card .value { font-weight:700; font-size:1.35rem; color:var(--text); }
+.stat-card .value .unit { font-size:0.8rem; font-weight:400; color:var(--text2); }
 
-  .controls { max-width: 1400px; margin: 1.75rem auto 0; padding: 0 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
-  .search-box { flex: 1; min-width: 220px; position: relative; }
-  .search-box input { width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 0.65rem 1rem 0.65rem 2.5rem; color: var(--text-primary); font-family: 'Source Sans 3', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
-  .search-box input:focus { border-color: var(--accent-blue); }
-  .search-box input::placeholder { color: var(--text-muted); }
-  .search-box .icon { position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem; }
-  .filter-group { display: flex; gap: 0.5rem; align-items: center; }
-  .filter-group label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-  select { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.85rem; color: var(--text-primary); font-family: 'Source Sans 3', sans-serif; font-size: 0.85rem; outline: none; cursor: pointer; }
-  select:focus { border-color: var(--accent-blue); }
+/* — Controls — */
+.controls { max-width:1400px; margin:1.25rem auto 0; padding:0 2rem; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; }
+.search-box { flex:1; min-width:200px; position:relative; }
+.search-box input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.55rem 0.85rem 0.55rem 2.3rem; color:var(--text); font-family:inherit; font-size:0.85rem; outline:none; transition:border-color 0.2s; }
+.search-box input:focus { border-color:var(--accent); }
+.search-box input::placeholder { color:var(--text-muted); }
+.search-box .icon { position:absolute; left:0.8rem; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:0.85rem; }
+.filter-group { display:flex; gap:0.5rem; align-items:center; }
+.filter-group label { font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; }
+select { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.55rem 0.85rem; color:var(--text); font-family:inherit; font-size:0.85rem; outline:none; cursor:pointer; }
+select:focus { border-color:var(--accent); }
 
-  .table-container { max-width: 1400px; margin: 1.25rem auto 3rem; padding: 0 2rem; overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-  thead th { position: sticky; top: 0; z-index: 10; background: var(--bg-secondary); font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
-  tbody tr { border-bottom: 1px solid rgba(30,45,74,0.5); transition: background 0.15s; }
-  tbody tr:hover { background: var(--bg-row-hover); }
-  tbody td { padding: 0.7rem 1rem; vertical-align: middle; white-space: nowrap; }
+/* — Buttons — */
+.ctrl-btn { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem; color:var(--text); font-family:inherit; font-size:0.82rem; font-weight:500; cursor:pointer; transition:border-color 0.15s, background 0.15s; white-space:nowrap; }
+.ctrl-btn:hover:not(:disabled) { border-color:var(--accent); background:var(--accent-dim); }
+.ctrl-btn:disabled { opacity:0.4; cursor:default; }
+.ctrl-btn.active { border-color:var(--accent); background:var(--accent-dim); color:var(--accent); font-weight:600; }
 
-  .col-rank { width: 55px; text-align: center; font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 0.95rem; }
-  .rank-top5 { color: var(--accent-gold); }
-  .rank-top20 { color: var(--accent-blue); }
-  .rank-top50 { color: var(--accent-cyan); }
-  .col-player { min-width: 200px; }
-  .player-name { font-weight: 600; font-size: 0.92rem; }
-  .player-team { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.05rem; }
-  .col-num { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; }
-  .col-rat { font-weight: 600; }
-  .rat-elite { color: var(--accent-gold); }
-  .rat-star { color: var(--accent-blue); }
-  .rat-solid { color: var(--accent-cyan); }
-  .rat-avg { color: var(--text-primary); }
-  .rat-low { color: var(--text-muted); }
-  .col-real-value { font-weight: 700; font-size: 0.85rem; }
-  .surplus-pos { color: var(--surplus-pos); }
-  .surplus-neg { color: var(--surplus-neg); }
-  .surplus-neutral { color: var(--surplus-neutral); }
+/* — Tables — */
+.table-container { max-width:1400px; margin:1.25rem auto 3rem; padding:0 2rem; overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+thead th { position:sticky; top:0; z-index:10; background:var(--surface2); font-family:'JetBrains Mono','DM Mono',monospace; font-size:0.62rem; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); padding:0.6rem 0.5rem; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+thead th:hover { color:var(--accent); }
+tbody tr { border-bottom:1px solid var(--border); transition:background 0.12s; }
+tbody tr:hover { background:rgba(59,130,246,0.03); }
+tbody td { padding:0.55rem 0.5rem; vertical-align:middle; white-space:nowrap; }
 
-  .surplus-cell { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; }
-  .surplus-bar-track { width: 80px; height: 6px; background: rgba(255,255,255,0.04); border-radius: 3px; position: relative; overflow: hidden; }
-  .surplus-bar { position: absolute; top: 0; height: 100%; border-radius: 3px; }
-  .surplus-bar.positive { left: 50%; background: var(--surplus-pos); }
-  .surplus-bar.negative { right: 50%; background: var(--surplus-neg); }
-  .surplus-bar-center { position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px; background: rgba(255,255,255,0.15); }
+/* — Loading & Errors — */
+.loading-overlay, .loading-state { text-align:center; padding:4rem 2rem; color:var(--text2); }
+.loading-overlay .spinner, .loading-spinner { display:inline-block; width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:hmSpin 0.8s linear infinite; margin:0 auto 1rem; }
+@keyframes hmSpin { to { transform:rotate(360deg); } }
+.loading-overlay p { color:var(--text2); font-size:0.9rem; }
+.error-msg { color:var(--red); max-width:600px; margin:0 auto; text-align:center; }
 
-  .wm-detail { position: relative; cursor: help; }
-  .wm-detail .wm-tooltip { display: none; position: absolute; right: 0; top: 100%; margin-top: 4px; background: #1a2540; border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.85rem; z-index: 20; white-space: nowrap; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.7; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
-  .wm-detail:hover .wm-tooltip { display: block; }
-  .wm-tooltip .tt-label { color: var(--text-muted); }
-  .wm-tooltip .tt-val { color: var(--text-primary); font-weight: 500; }
+/* — Footer — */
+.footer { max-width:1400px; margin:0 auto; padding:1.5rem 2rem 2.5rem; text-align:center; font-size:0.75rem; color:var(--text-muted); border-top:1px solid var(--border); }
+.footer a, footer a { color:var(--accent); text-decoration:none; }
 
-  .methodology { max-width: 1400px; margin: 0 auto 3rem; padding: 0 2rem; }
-  .method-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1.75rem 2rem; }
-  .method-card h3 { font-family: 'Oswald', sans-serif; font-size: 1.05rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 0.75rem; }
-  .method-card p { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.65; max-width: 960px; }
-  .method-card p + p { margin-top: 0.6rem; }
-  .method-card code { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--accent-cyan); background: rgba(34,211,238,0.08); padding: 0.15em 0.4em; border-radius: 3px; }
-  .formula-block { background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.25rem; margin-top: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--accent-cyan); line-height: 1.8; }
-  .formula-block .step-label { color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; }
+/* — Responsive — */
+@media(max-width:900px) { .stats-bar{grid-template-columns:repeat(2,1fr);} .controls{flex-direction:column;} .search-box{min-width:100%;} }
+@media(max-width:600px) { .stats-bar{grid-template-columns:1fr 1fr;gap:0.5rem;} .stat-card{padding:0.75rem;} .stat-card .value{font-size:1.1rem;} .header{padding:1.25rem 1rem 1rem;} .header h1,.header-brand h1{font-size:1.25rem;} .table-container{padding:0 0.5rem;} td,th{padding:0.4rem 0.35rem;} }
 
-  .loading-overlay { max-width: 1400px; margin: 4rem auto; padding: 0 2rem; text-align: center; }
-  .loading-overlay .spinner { display: inline-block; width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-overlay p { color: var(--text-secondary); font-size: 0.9rem; }
-  .error-msg { color: var(--surplus-neg); max-width: 600px; margin: 0 auto; text-align: center; }
 
-  .footer { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 2.5rem; text-align: center; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid var(--border); }
+/* — Real Value specific — */
+.col-rank { width:55px; text-align:center; font-weight:700; font-size:0.95rem; }
+.rank-top5 { color:var(--accent-gold); }
+.rank-top20 { color:var(--accent); }
+.rank-top50 { color:var(--accent-cyan); }
+.col-player { min-width:200px; }
+.player-name { font-weight:600; font-size:0.88rem; }
+.player-team { font-size:0.72rem; color:var(--text2); margin-top:0.05rem; }
+.col-num { text-align:right; font-family:'JetBrains Mono',monospace; font-size:0.82rem; }
+.col-rat { font-weight:600; }
+.rat-elite { color:#b45309; } .rat-star { color:var(--accent); } .rat-solid { color:var(--accent-cyan); } .rat-avg { color:var(--text); } .rat-low { color:var(--text-muted); }
+.col-real-value { font-weight:700; font-size:0.85rem; }
+.surplus-pos { color:var(--surplus-pos); } .surplus-neg { color:var(--surplus-neg); } .surplus-neutral { color:var(--surplus-neutral); }
+.surplus-cell { display:flex; align-items:center; justify-content:flex-end; gap:0.6rem; }
+.surplus-bar-track { width:80px; height:6px; background:rgba(0,0,0,0.04); border-radius:3px; position:relative; overflow:hidden; }
+.surplus-bar { position:absolute; top:0; height:100%; border-radius:3px; }
+.surplus-bar.positive { left:50%; background:var(--surplus-pos); }
+.surplus-bar.negative { right:50%; background:var(--surplus-neg); }
+.surplus-bar-center { position:absolute; left:50%; top:-1px; bottom:-1px; width:1px; background:rgba(0,0,0,0.1); }
+.wm-detail { position:relative; cursor:help; }
+.wm-detail .wm-tooltip { display:none; position:absolute; right:0; top:100%; margin-top:4px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.6rem 0.85rem; z-index:20; white-space:nowrap; font-size:0.72rem; color:var(--text2); line-height:1.7; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.wm-detail:hover .wm-tooltip { display:block; }
+.wm-tooltip .tt-label { color:var(--text-muted); }
+.wm-tooltip .tt-val { color:var(--text); font-weight:500; }
+.methodology { max-width:1400px; margin:0 auto 3rem; padding:0 2rem; }
+.method-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1.75rem 2rem; }
+.method-card h3 { font-size:1rem; font-weight:700; color:var(--text2); margin-bottom:0.75rem; }
+.method-card p { color:var(--text2); font-size:0.85rem; line-height:1.65; max-width:960px; }
+.method-card p + p { margin-top:0.6rem; }
+.method-card code { font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--accent); background:var(--accent-dim); padding:0.15em 0.4em; border-radius:3px; }
+.formula-block { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:1rem 1.25rem; margin-top:1rem; font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--accent); line-height:1.8; }
+.formula-block .step-label { color:var(--text-muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; }
+tbody tr { animation:fadeInRow 0.25s ease both; }
+@keyframes fadeInRow { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+.snap-banner { max-width:1400px; margin:0.75rem auto 0; padding:0 2rem; }
+.snap-banner-inner { background:var(--accent-dim); border:1px solid rgba(59,130,246,0.15); border-radius:8px; padding:0.5rem 1rem; font-size:0.8rem; color:var(--accent); display:flex; align-items:center; gap:0.5rem; }
+.delta { font-size:0.68rem; font-family:'JetBrains Mono',monospace; margin-left:4px; }
+.delta-up { color:var(--surplus-pos); } .delta-down { color:var(--surplus-neg); } .delta-flat { color:var(--text-muted); }
+@media(max-width:600px) { .surplus-bar-track{display:none;} }
 
-  @media (max-width: 900px) { .stats-bar { grid-template-columns: repeat(2,1fr); } .controls { flex-direction: column; } .search-box { min-width: 100%; } }
-  @media (max-width: 600px) { .stats-bar { grid-template-columns: 1fr 1fr; gap: 0.5rem; } .stat-card { padding: 0.85rem 1rem; } .stat-card .value { font-size: 1.2rem; } .header { padding: 1.5rem 1rem 1.25rem; } .header-brand h1 { font-size: 1.4rem; } .table-container { padding: 0 0.5rem; } .surplus-bar-track { display: none; } td, th { padding: 0.5rem 0.6rem; } }
-  tbody tr { animation: fadeInRow 0.25s ease both; }
-  @keyframes fadeInRow { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-  .ctrl-btn { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 1rem; color: var(--text-primary); font-family: 'Source Sans 3', sans-serif; font-size: 0.82rem; cursor: pointer; transition: border-color 0.2s, background 0.2s; white-space: nowrap; }
-  .ctrl-btn:hover:not(:disabled) { border-color: var(--accent-blue); background: rgba(59,130,246,0.08); }
-  .ctrl-btn:disabled { opacity: 0.4; cursor: default; }
-  .ctrl-btn.active { border-color: var(--accent-gold); background: rgba(240,182,55,0.1); }
-  .snap-banner { max-width: 1400px; margin: 0.75rem auto 0; padding: 0 2rem; }
-  .snap-banner-inner { background: rgba(240,182,55,0.08); border: 1px solid rgba(240,182,55,0.25); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--accent-gold); display: flex; align-items: center; gap: 0.5rem; }
-  .delta { font-size: 0.68rem; font-family: 'JetBrains Mono', monospace; margin-left: 4px; }
-  .delta-up { color: var(--surplus-pos); }
-  .delta-down { color: var(--surplus-neg); }
-  .delta-flat { color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -130,7 +126,7 @@
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v3.8-DEF</span>
+      <span class="tag">v2.4</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -157,10 +153,8 @@
     <select id="sortSelect" disabled>
       <option value="uncappedTV-desc">Real Value ↓</option>
       <option value="uncappedTV-asc">Real Value ↑</option>
-      <option value="rvDelta-desc">Δ Real Value ↓</option>
-      <option value="rvDelta-asc">Δ Real Value ↑</option>
-      <option value="tvPerYear-desc">Trade Value ↓</option>
-      <option value="tvPerYear-asc">Trade Value ↑</option>
+      <option value="contractTV-desc">Trade Value ↓</option>
+      <option value="contractTV-asc">Trade Value ↑</option>
       <option value="surplus-desc">Surplus ↓</option>
       <option value="surplus-asc">Surplus ↑</option>
       <option value="watermark-desc">Watermark ↓</option>
@@ -174,12 +168,14 @@
     </select>
   </div>
   <div class="filter-group" style="margin-left:auto;">
+    <button id="snapshotBtn" class="ctrl-btn" disabled>📸 Snapshot</button>
     <button id="refreshBtn" class="ctrl-btn" disabled>🔄 Refresh</button>
+    <button id="clearSnapBtn" class="ctrl-btn" style="display:none">✕ Clear</button>
   </div>
 </div>
 
 <div class="snap-banner" id="snapBanner" style="display:none">
-  <div class="snap-banner-inner" id="snapBannerText"></div>
+  <div class="snap-banner-inner">📸 Snapshot locked — update your sheet, then hit <strong>Refresh</strong> to see changes</div>
 </div>
 
 <div id="loadingArea">
@@ -200,7 +196,6 @@
         <th style="text-align:right">Watermark</th>
         <th style="text-align:right">Salary</th>
         <th style="text-align:right">Real Value</th>
-        <th style="text-align:right">Δ</th>
         <th style="text-align:center">Category</th>
         <th style="text-align:right">Surplus</th>
         <th style="text-align:right">Trade Value</th>
@@ -214,11 +209,11 @@
 <div class="methodology">
   <div class="method-card">
     <h3>Methodology</h3>
-    <p>Real values are distributed from a <strong style="color:var(--text-primary)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
-    <p>The <strong style="color:var(--text-primary)">Watermark</strong> rating uses a time-decay weighted average: each game's per-game RAT contributes weighted by its season's recency — 2025-26 at full weight (1.0), then decaying by 0.6× per year back (0.6, 0.36, 0.216, 0.13). Recent performance matters most while still crediting a strong track record. Hover over any Watermark to see the per-season breakdown.</p>
-    <p>The final Real Value is an <strong style="color:var(--text-primary)">85/15 blend</strong>: 85% from the Watermark-based distribution and 15% from the RAT 365-based distribution. Both distributions use a <strong>soft-capped exponent</strong> <code>r^3.2 / (1 + r^3.2/14000)</code>, creating a steep progressive curve that rewards elite production while compressing extreme outliers at the top.</p>
-    <p>A <strong style="color:var(--text-primary)">games-played correction</strong> is applied per-season to compensate for the Global Rating's built-in availability penalty. For each season, the per-game average is adjusted by <code>(expected / actual)^0.8</code>, capped at 1.4× and only for players with ≥40% of expected games. However, this correction <strong style="color:var(--text-primary)">fades with age</strong>: players over 28 receive progressively less GP correction, reflecting that older players are more likely to suffer recurring or decline-related injuries. The boost portion decays by <code>e^(-0.12 × (age − 28))</code>, so a 35-year-old retains only ~43% of the correction a younger player would get.</p>
-    <p>An <strong style="color:var(--text-primary)">age factor</strong> rewards youth and mildly penalizes age. Players below the league average age (~26.5) receive up to a 2× bonus scaling linearly to the youngest player. Players 35 and older receive a 3% penalty per year over 35 (floor 0.5×). Players between average and 35 are unaffected. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
+    <p>Real values are distributed from a <strong style="color:var(--text)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
+    <p>The <strong style="color:var(--text)">Watermark</strong> rating uses a time-decay weighted average: each game's per-game RAT contributes weighted by its season's recency — 2025-26 at full weight (1.0), then decaying by 0.6× per year back (0.6, 0.36, 0.216, 0.13). Recent performance matters most while still crediting a strong track record. Hover over any Watermark to see the per-season breakdown.</p>
+    <p>The final Real Value is an <strong style="color:var(--text)">85/15 blend</strong>: 85% from the Watermark-based distribution and 15% from the RAT 365-based distribution. Both distributions use a <strong>soft-capped exponent</strong> <code>r^3.2 / (1 + r^3.2/14000)</code>, creating a steep progressive curve that rewards elite production while compressing extreme outliers at the top.</p>
+    <p>A <strong style="color:var(--text)">games-played correction</strong> is applied per-season to compensate for the Global Rating's built-in availability penalty. For each season, the per-game average is adjusted by <code>(expected / actual)^0.8</code>, capped at 1.4× and only for players with ≥40% of expected games. However, this correction <strong style="color:var(--text)">fades with age</strong>: players over 28 receive progressively less GP correction, reflecting that older players are more likely to suffer recurring or decline-related injuries. The boost portion decays by <code>e^(-0.12 × (age − 28))</code>, so a 35-year-old retains only ~43% of the correction a younger player would get.</p>
+    <p>An <strong style="color:var(--text)">age factor</strong> rewards youth and mildly penalizes age. Players below the league average age (~26.5) receive up to a 2× bonus scaling linearly to the youngest player. Players 35 and older receive a 3% penalty per year over 35 (floor 0.5×). Players between average and 35 are unaffected. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
     <p>A <strong style="color:var(--accent-gold)">potential bonus</strong> (up to $18M) is added for players under 25, based on their draft position and age. Both factors use exponential decay: earlier draft picks and younger ages receive larger bonuses, with bigger gaps at the top (e.g., the difference between pick 1 and 2 is larger than between picks 59 and 60). Hover over the Age column to see the potential bonus breakdown.</p>
     <p>The distribution uses a <strong style="color:var(--accent-gold)">soft-capped exponent</strong> — <code>score = r^3.2 / (1 + r^3.2 / 14000)</code> — instead of a plain power curve. For mid-tier players, this behaves like a normal r^3.2 distribution, creating enough separation to push ~32 players above max-contract thresholds. For elite outliers, the denominator grows, compressing the very top so no player exceeds ~$95M. The total always equals the salary pool by construction.</p>
     <p><strong style="color:var(--accent)">Trade Value</strong> measures a player's contract-adjusted worth, starting from the 2025-26 surplus. It takes the Real Value as a percentage of the current salary cap, then projects it forward for each remaining contract year using <strong>projected future caps</strong> and a <strong>5% per year wear-and-tear discount</strong> on signed contract years — reflecting the risk of being locked into a guaranteed salary. <strong>Player Options</strong>: if projected value exceeds option salary, the player declines (<span style="color:var(--accent)">PO↗</span>). <strong>Team Options</strong>: if option salary exceeds projected value, the team declines (<span style="color:var(--surplus-neg)">TO✗</span>). <strong>Restricted Free Agents</strong> (YOS ≤ 4 at contract end with positive surplus) get 3 projected years at market salary with 8% raises, at full value with no wear-and-tear (<span style="color:var(--accent-gold)">RFA</span>). The league-wide sum of all Trade Values is normalized to $0.</p>
@@ -234,7 +229,7 @@
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.8-DEF — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.4 — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -244,26 +239,6 @@ const CONTRACT_TAB = 'Sheet6';
 const SHEETS_API = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values`;
 const RATINGS_URL = `${SHEETS_API}/${RATINGS_TAB}?key=${API_KEY}`;
 const CONTRACT_URL = `${SHEETS_API}/${CONTRACT_TAB}?key=${API_KEY}`;
-
-// ═══ DEFENSIVE DATA SOURCE ═══
-// Season Stats sheet for live defensive computation + history
-const STATS_SHEET_ID = '1JH2FUBIyQ1zEHzZBxgP8vHBZ7d8EtP5-fSVG3zMgCgg';
-const STATS_API = `https://sheets.googleapis.com/v4/spreadsheets/${STATS_SHEET_ID}/values`;
-const DEF_TABS = {
-  trad:    'Player Traditional Totals',
-  adv:     'Player Advanced',
-  hustle:  'Player Hustle',
-  defTrk:  'Def_Tracking_Overall',
-  teamAdv: 'Team Advanced',
-  defHist: 'Defensive History',
-};
-function defTabURL(tab) { return `${STATS_API}/${encodeURIComponent(tab)}?key=${API_KEY}`; }
-
-// Defensive blend weights (mirrors offensive structure)
-const DEF_OVERALL_WEIGHT = 0.25;  // Defensive multiplier strength (how much defense can shift TV)
-const OFF_OVERALL_WEIGHT = 0.85;  // (not used in multiplicative model, kept for reference)
-const DEF_WM_WEIGHT = 0.85;      // Within defense: 85% watermark
-const DEF_365_WEIGHT = 0.15;     // Within defense: 15% def-365
 const EXPONENT = 3.2;
 const KNEE = 14000; // Soft-cap: score = r^EXP / (1 + r^EXP / KNEE)
 const WM_WEIGHT = 0.85;
@@ -331,184 +306,7 @@ function parseCSV(text) {
   return rows;
 }
 
-// ═══════════════════════════════════════════════════════
-// DEFENSIVE SCORE COMPUTATION
-// ═══════════════════════════════════════════════════════
-
-// Parse Season Stats sheet (metadata row, possible blank, headers, data)
-function parseDefSheet(data) {
-  if (!data.values || data.values.length < 2) return { headers: [], rows: [] };
-  let headerIdx = -1;
-  for (let i = 0; i < Math.min(data.values.length, 5); i++) {
-    const row = data.values[i];
-    const first = (row[0] || '').trim();
-    if (first.toLowerCase().startsWith('season') || first.includes('Updated')) continue;
-    if (row.filter(c => (c || '').trim() !== '').length < 3) continue;
-    headerIdx = i; break;
-  }
-  if (headerIdx < 0) return { headers: [], rows: [] };
-  const headers = data.values[headerIdx].map(h => (h || '').trim());
-  const rows = data.values.slice(headerIdx + 1).map(r => {
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = r[i] !== undefined ? r[i] : ''; });
-    return obj;
-  });
-  return { headers, rows };
-}
-
-function defResolve(row, ...keys) {
-  for (const k of keys) { if (row[k] !== undefined && row[k] !== '') return row[k]; }
-  return '';
-}
-function defNum(v) { if (v === undefined || v === null || v === '') return null; const n = parseFloat(String(v).replace(/,/g,'')); return isNaN(n) ? null : n; }
-
-// Archetype sigmoid
-function perimWeight(blkPg) { return 1.0 / (1.0 + Math.exp(3.0 * (blkPg - 1.0))); }
-
-const DEF_INTERIOR = {
-  'PCT_PLUSMINUS':{w:22,d:-1},'BLK_PG':{w:22,d:1},'DEF_RATING':{w:14,d:-1},
-  'NET_RATING':{w:10,d:1},'D_FG_PCT':{w:10,d:-1},'CONTESTED_SHOTS_PG':{w:8,d:1},
-  'STL_PG':{w:5,d:1},'DEFLECTIONS_PG':{w:5,d:1},'REB_PG':{w:4,d:1},
-};
-const DEF_PERIMETER = {
-  'STL_PG':{w:22,d:1},'DEFLECTIONS_PG':{w:16,d:1},'PF_PG':{w:8,d:1},
-  'CHARGES_DRAWN_PG':{w:6,d:1},'PCT_PLUSMINUS':{w:12,d:-1},'NET_RATING':{w:8,d:1},
-  'W':{w:8,d:1},'D_FG_PCT':{w:6,d:-1},'DEF_RATING':{w:6,d:-1},
-  'MPG':{w:4,d:1},'LOOSE_BALLS_RECOVERED_PG':{w:4,d:1},
-};
-const DEF_ALL_FEATS = new Set([...Object.keys(DEF_INTERIOR), ...Object.keys(DEF_PERIMETER)]);
-
-function computeLiveDefScores(tradSheet, advSheet, hustleSheet, defTrkSheet, teamAdvSheet) {
-  // Build team ID→abbreviation + team defense map
-  const idToAbbr = {};
-  for (const r of tradSheet.rows) {
-    const abbr = defResolve(r,'TEAM_ABBREVIATION','TEAM_ABB').trim();
-    const id = defResolve(r,'TEAM_ID').trim();
-    if (abbr && id) idToAbbr[id] = abbr;
-  }
-  const teamDefMap = {};
-  const tRows = teamAdvSheet.rows.map(r => ({
-    team: idToAbbr[defResolve(r,'TEAM_ID').trim()] || '',
-    drtg: defNum(defResolve(r,'DEF_RATING','DRTG'))
-  })).filter(r => r.team && r.drtg !== null && r.drtg < 999);
-  tRows.sort((a,b) => a.drtg - b.drtg);
-  tRows.forEach((t,i) => { teamDefMap[t.team] = { drtg: t.drtg, rank: i+1 }; });
-
-  // Lookup maps
-  function buildLookup(rows) {
-    const map = {};
-    for (const r of rows) {
-      const n = defResolve(r,'PLAYER_NAME','PLAYER').trim();
-      const t = defResolve(r,'TEAM_ABBREVIATION','TEAM_ABB','PLAYER_LAST_TEAM_ABBREVIATION').trim();
-      if (n) { map[n+'|'+t] = r; if (!map[n]) map[n] = r; }
-    }
-    return map;
-  }
-  function lookup(m, name, team) { return m[name+'|'+team] || m[name] || {}; }
-
-  const advMap = buildLookup(advSheet.rows);
-  const hustleMap = buildLookup(hustleSheet.rows);
-  const defTrkMap = buildLookup(defTrkSheet.rows);
-
-  // Build player array
-  const players = [];
-  for (const r of tradSheet.rows) {
-    const name = defResolve(r,'PLAYER_NAME','PLAYER').trim();
-    const team = defResolve(r,'TEAM_ABBREVIATION','TEAM_ABB').trim();
-    if (!name || !team) continue;
-    const gp = defNum(defResolve(r,'GP')) || 0;
-    const min = defNum(defResolve(r,'MIN')) || 0;
-    const mpg = gp > 0 ? min / gp : 0;
-    if (gp < 1) continue;
-
-    const a = lookup(advMap, name, team);
-    const h = lookup(hustleMap, name, team);
-    const d = lookup(defTrkMap, name, team);
-    const td = teamDefMap[team] || {};
-    const hGP = defNum(defResolve(h,'G','GP')) || gp;
-
-    const p = {
-      name, team, gp, MPG: mpg,
-      STL_PG: gp>0 ? (defNum(defResolve(r,'STL'))||0)/gp : 0,
-      BLK_PG: gp>0 ? (defNum(defResolve(r,'BLK'))||0)/gp : 0,
-      REB_PG: gp>0 ? (defNum(defResolve(r,'REB'))||0)/gp : 0,
-      PF_PG:  gp>0 ? (defNum(defResolve(r,'PF'))||0)/gp : 0,
-      W: defNum(defResolve(r,'W','WIN','WINS')) || 0,
-      DEF_RATING: defNum(defResolve(a,'DEF_RATING','DRTG')),
-      NET_RATING: defNum(defResolve(a,'NET_RATING','NRTG')),
-      DEFLECTIONS_PG:     hGP>0 ? (defNum(defResolve(h,'DEFLECTIONS'))||0)/hGP : 0,
-      CONTESTED_SHOTS_PG: hGP>0 ? (defNum(defResolve(h,'CONTESTED_SHOTS'))||0)/hGP : 0,
-      CHARGES_DRAWN_PG:   hGP>0 ? (defNum(defResolve(h,'CHARGES_DRAWN'))||0)/hGP : 0,
-      LOOSE_BALLS_RECOVERED_PG: hGP>0 ? (defNum(defResolve(h,'LOOSE_BALLS_RECOVERED'))||0)/hGP : 0,
-      D_FG_PCT: defNum(defResolve(d,'D_FG_PCT')),
-      PCT_PLUSMINUS: defNum(defResolve(d,'PCT_PLUSMINUS')),
-      TEAM_DRTG: td.drtg || null, TEAM_RANK: td.rank || null,
-    };
-    p.PERIM_W = perimWeight(p.BLK_PG);
-    if (p.DEF_RATING === null && p.D_FG_PCT === null) continue;
-    players.push(p);
-  }
-  if (players.length === 0) return {};
-
-  // Z-scores
-  const feats = [...DEF_ALL_FEATS];
-  const means = {}, stds = {};
-  for (const f of feats) {
-    const vals = players.map(p => p[f]).filter(v => v !== null && !isNaN(v));
-    const n = vals.length; if (n===0) { means[f]=0; stds[f]=1; continue; }
-    const mean = vals.reduce((a,b)=>a+b,0)/n;
-    means[f] = mean; stds[f] = Math.sqrt(vals.reduce((a,v)=>a+(v-mean)**2,0)/n) || 1;
-  }
-  for (const p of players) {
-    for (const f of feats) p[f+'_z'] = (p[f]!==null && !isNaN(p[f])) ? (p[f]-means[f])/stds[f] : 0;
-  }
-
-  // Composite
-  for (const p of players) {
-    let intS=0; for (const [f,{w,d}] of Object.entries(DEF_INTERIOR)) intS += w*d*(p[f+'_z']||0);
-    let perS=0; for (const [f,{w,d}] of Object.entries(DEF_PERIMETER)) perS += w*d*(p[f+'_z']||0);
-    p.BASE_RAW = p.PERIM_W * perS + (1-p.PERIM_W) * intS;
-  }
-
-  // Anchor bonus
-  const medWins = (() => { const s = players.map(p=>p.W).sort((a,b)=>a-b); const m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; })();
-  for (const p of players) {
-    p.ANCHOR = 0;
-    const rk = p.TEAM_RANK; if (!rk || rk > 15) continue;
-    const tf = rk<=5?1.0:rk<=10?0.5:0.25;
-    const mf = Math.max(0,Math.min(1,(p.MPG-25)/9));
-    let sf=0.5; if (p.TEAM_DRTG && p.DEF_RATING) sf=Math.max(0.15,Math.min(1,0.5+(p.TEAM_DRTG-p.DEF_RATING)/8));
-    const wf = Math.max(0.3,Math.min(1,0.5+(p.W-medWins)/25));
-    p.ANCHOR = 18 * tf * mf * sf * wf;
-  }
-
-  // Organic score
-  for (const p of players) p.DEF_SCORE = Math.max(0, (p.BASE_RAW + p.ANCHOR) * 0.12 + 15);
-
-  // Return map: playerName → score
-  const result = {};
-  for (const p of players) result[p.name] = p.DEF_SCORE;
-  return result;
-}
-
-function parseDefHistory(histSheet) {
-  // Returns { playerName: [{year: '2024-25', score: 28.5, gp: 72}, ...] }
-  const result = {};
-  for (const r of histSheet.rows) {
-    const name = (r.PLAYER || '').trim();
-    const season = (r.SEASON || '').trim();
-    const score = parseFloat(r.DEF_SCORE);
-    const gp = parseInt(r.GP) || 0;
-    if (!name || !season || isNaN(score)) continue;
-    if (!result[name]) result[name] = [];
-    result[name].push({ year: season, score, gp });
-  }
-  return result;
-}
-
-function processData(rows, contractRows, defData) {
-  // defData = { liveScores: {playerName: defScore}, histScores: {playerName: [{year, score, gp}]} }
-  console.log('processData called, defData:', defData ? `live=${Object.keys(defData.liveScores).length}, hist=${Object.keys(defData.histScores).length}` : 'NULL');
+function processData(rows, contractRows) {
   const dataRows = rows.slice(1);
   const roster = [], historical = [];
   let todayStr = null;
@@ -657,115 +455,15 @@ function processData(rows, contractRows, defData) {
     }
   }
 
-  // ═══ DEFENSIVE WATERMARK + DEF365 ═══
-  // Mirrors offensive structure: time-decay weighted historical + current blend
-  const DEF_SEASON_WEIGHT = {'2024-25':0.6,'2023-24':0.36,'2022-23':0.216,'2021-22':0.1296};
-  
-  // Season progress for def365: weight current vs last season by days elapsed
-  // NBA season roughly Oct 22 → Apr 13 ≈ 173 days
-  const SEASON_START = new Date(2025, 9, 22); // Oct 22, 2025
-  const SEASON_DAYS = 173;
-  const daysSinceStart = Math.max(0, (today - SEASON_START) / (24*60*60*1000));
-  const seasonProgress = Math.min(1.0, daysSinceStart / SEASON_DAYS);
-
-  const liveDefScores = defData ? defData.liveScores || {} : {};
-  const histDefScores = defData ? defData.histScores || {} : {};
-
-  // Build normalized name lookup for defense (handles NBA vs HH naming)
-  function normName(n) { return n.toLowerCase().replace(/[^a-z]/g, ''); }
-  const liveDefNorm = {};
-  for (const [k,v] of Object.entries(liveDefScores)) liveDefNorm[normName(k)] = v;
-  const histDefNorm = {};
-  for (const [k,v] of Object.entries(histDefScores)) histDefNorm[normName(k)] = v;
-
-  function findLiveDef(name) { return liveDefScores[name] || liveDefNorm[normName(name)] || 0; }
-  function findHistDef(name) { return histDefScores[name] || histDefNorm[normName(name)] || []; }
-
-  for (const p of roster) {
-    // Defensive watermark: time-decay weighted historical scores
-    const hist = findHistDef(p.player);
-    let defWmNum = 0, defWmDen = 0;
-    for (const h of hist) {
-      const w = DEF_SEASON_WEIGHT[h.year] || 0;
-      if (w <= 0 || h.gp <= 0) continue;
-      defWmNum += h.score * w * h.gp;
-      defWmDen += w * h.gp;
-    }
-    p.defWatermark = defWmDen > 0 ? defWmNum / defWmDen : 0;
-
-    // Defensive 365: blend live (2025-26) + last season (2024-25) by season progress
-    const liveDef = findLiveDef(p.player);
-    const lastSeason = hist.find(h => h.year === '2024-25');
-    const lastDef = lastSeason ? lastSeason.score : 0;
-    // If we have live data: weight by progress. If no live data: use last season only
-    if (liveDef > 0 && lastDef > 0) {
-      p.def365 = seasonProgress * liveDef + (1 - seasonProgress) * lastDef;
-    } else if (liveDef > 0) {
-      p.def365 = liveDef;
-    } else {
-      p.def365 = lastDef;
-    }
-  }
-
-  // Real value: full offensive TV × defensive multiplier × age × shooting
-  // Defense acts as a multiplier: avg defender = 1.0x, elite = up to ~1.15x, poor = down to ~0.85x
-  // This preserves offensive pool distribution while rewarding/penalizing defense
+  // Real value: 85/15 blend × age multiplier × shooting penalty, then renormalize to pool
+  // Soft-capped exponent: compresses elite outliers while preserving mid-tier separation
   function softScore(r) { const s = Math.pow(Math.max(r, 0), EXPONENT); return s / (1.0 + s / KNEE); }
-
-  // Offensive pools (unchanged from before)
   const totalAdjWM = roster.reduce((s,p) => s + softScore(p.watermark), 0);
   const totalAdjRAT = roster.reduce((s,p) => s + softScore(p.rat365adj), 0);
-
-  // Compute defensive composite per player (85% defWM + 15% def365)
-  const hasDefense = roster.some(p => p.defWatermark > 0 || p.def365 > 0);
-  
-  if (hasDefense) {
-    // Each player's composite defensive score
-    for (const p of roster) {
-      p.defComposite = DEF_WM_WEIGHT * p.defWatermark + DEF_365_WEIGHT * p.def365;
-    }
-    // Pool average (only players with defensive data)
-    const withDef = roster.filter(p => p.defComposite > 0);
-    const avgDef = withDef.length > 0 ? withDef.reduce((s,p) => s + p.defComposite, 0) / withDef.length : 1;
-    console.log('=== DEFENSE MULT: avgDef=' + avgDef.toFixed(2) + ', players with def=' + withDef.length + ', seasonProgress=' + seasonProgress.toFixed(2) + ' ===');
-    
-    // Defensive multiplier: centered at 1.0 for average, scaled by DEF_OVERALL_WEIGHT
-    for (const p of roster) {
-      if (p.defComposite > 0) {
-        // How far above/below average (as ratio)
-        const defRatio = p.defComposite / avgDef;
-        // Multiplier: 1.0 + weight × (ratio - 1.0)
-        // With DEF_OVERALL_WEIGHT=0.15: elite (2x avg) → 1.15x, poor (0.5x avg) → 0.925x
-        p.defMult = 1.0 + DEF_OVERALL_WEIGHT * (defRatio - 1.0);
-        // Clamp to reasonable range
-        p.defMult = Math.max(0.75, Math.min(1.35, p.defMult));
-      } else {
-        p.defMult = 1.0; // No defensive data → neutral
-      }
-    }
-    
-    // Log sample players
-    const sorted = [...roster].sort((a,b) => b.defComposite - a.defComposite);
-    for (const p of sorted.slice(0, 5)) {
-      console.log('  DEF top: ' + p.player + ': composite=' + p.defComposite.toFixed(1) + ', mult=' + p.defMult.toFixed(3));
-    }
-    for (const p of sorted.slice(-3)) {
-      console.log('  DEF low: ' + p.player + ': composite=' + p.defComposite.toFixed(1) + ', mult=' + p.defMult.toFixed(3));
-    }
-  } else {
-    for (const p of roster) { p.defMult = 1.0; p.defComposite = 0; }
-  }
-
   for (const p of roster) {
-    // Offensive TV (internal 85/15 WM/RAT blend — full pool, not reduced)
     const tvWM = (softScore(p.watermark) / totalAdjWM) * totalSalaryPool;
     const tvRAT = (softScore(p.rat365adj) / totalAdjRAT) * totalSalaryPool;
-    const offTV = WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT;
-
-    // Apply defensive multiplier
-    p.tvPreAge = offTV * p.defMult;
-    p.defComponent = offTV * (p.defMult - 1.0); // How much defense added/removed
-
+    p.tvPreAge = WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT;
     // Shooting penalty: decrease by (value × 100)%
     p.shootingPenalty = (shootingMap[p.player] || 0) * 2;
     p.shootingMult = 1 - p.shootingPenalty;
@@ -862,7 +560,6 @@ function processData(rows, contractRows, defData) {
     p.contractEnd = 0;
     p.contractTV = 0;
     p.rfaYears = [];
-    p.ufaYears = [];
     p.poDeclined = false;
     p.toDeclined = false;
 
@@ -928,24 +625,6 @@ function processData(rows, contractRows, defData) {
       }
     }
 
-    // Step 4: UFA expiring projection (1 year) — player re-signs at market rate
-    // If contract ends this season (2026) and NOT an RFA, add a projected 2026-27 year
-    // at market salary → surplus ≈ $0. This dilutes high-surplus expirings (they'll walk)
-    // and softens negative-surplus expirings (bad money goes away = less risk).
-    const isExpiring = effectiveEnd <= 2026;
-    if (isExpiring && !isRFA && p.rfaYears.length === 0) {
-      const ufaYear = 2027;
-      const projCap = CAP_PROJ[ufaYear];
-      if (projCap) {
-        const projVal = Math.round(capPct * projCap);
-        // Market salary = projected value (they sign at what they're worth)
-        const marketSal = projVal;
-        const surp = 0; // By definition: value = salary in free agency
-        tvSum += surp;
-        p.ufaYears.push({ year: ufaYear, salary: marketSal, projVal, surplus: surp, status: 'UFA PROJ' });
-      }
-    }
-
     p.contractTV = Math.round(tvSum);
   }
 
@@ -968,14 +647,6 @@ function processData(rows, contractRows, defData) {
   }
   // Pool = sum of capped real values
   const cappedPool = roster.reduce((s,p) => s + p.tradeValue, 0);
-  
-  // Compute TV per contract year
-  for (const p of roster) {
-    const totalYears = p.contractYears.length + p.ufaYears.length;
-    p.tvPerYear = totalYears > 0 ? Math.round(p.contractTV / totalYears) : 0;
-    p.totalContractYears = totalYears;
-  }
-  
   // Rank by uncapped (real) value
   roster.sort((a,b) => b.uncappedTV - a.uncappedTV);
   roster.forEach((p,i) => p.rank = i+1);
@@ -984,85 +655,35 @@ function processData(rows, contractRows, defData) {
 }
 
 let appData = null;
-let dailySnap = null;  // Auto-loaded from previous day — NEVER cleared by user
-let dailySnapDate = ''; // Date label for the auto-comparison
+let snapshot = null;
 
-// ═══ Daily snapshot persistence ═══
-// Auto-saves today's values to localStorage. On next load, compares against the most recent previous day.
-const RV_SNAP_PREFIX = 'rv_snap_';
-
-function localDate() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
-function todayKey() {
-  return RV_SNAP_PREFIX + localDate();
-}
-
-function saveDaily() {
+function takeSnapshot() {
   if (!appData) return;
-  const data = {};
+  snapshot = {};
   for (const p of appData.players) {
-    data[p.player] = { rank: p.rank, tv: p.uncappedTV, surplus: p.surplus, watermark: p.watermark, rat365: p.rat365, contractTV: p.contractTV };
+    snapshot[p.player] = { rank: p.rank, tv: p.uncappedTV, surplus: p.surplus, watermark: p.watermark, rat365: p.rat365, contractTV: p.contractTV };
   }
-  localStorage.setItem(todayKey(), JSON.stringify(data));
-  // Prune old snapshots (keep last 7 days)
-  const keys = Object.keys(localStorage).filter(k => k.startsWith(RV_SNAP_PREFIX)).sort();
-  while (keys.length > 7) {
-    localStorage.removeItem(keys.shift());
-  }
+  document.getElementById('snapBanner').style.display = 'block';
+  document.getElementById('snapshotBtn').classList.add('active');
+  document.getElementById('snapshotBtn').textContent = '📸 Locked';
+  document.getElementById('clearSnapBtn').style.display = '';
+  update();
 }
 
-function loadPreviousSnapshot() {
-  const today = localDate();
-  const keys = Object.keys(localStorage).filter(k => k.startsWith(RV_SNAP_PREFIX)).sort().reverse();
-  for (const k of keys) {
-    const date = k.replace(RV_SNAP_PREFIX, '');
-    if (date < today) {
-      try {
-        const data = JSON.parse(localStorage.getItem(k));
-        if (data && Object.keys(data).length > 0) {
-          dailySnap = data;
-          dailySnapDate = date;
-          const banner = document.getElementById('snapBanner');
-          if (banner) {
-            banner.style.display = 'block';
-            document.getElementById('snapBannerText').textContent = `Δ column: comparing vs ${date}`;
-          }
-          console.log(`Auto-loaded snapshot from ${date} (${Object.keys(data).length} players)`);
-          return;
-        }
-      } catch(e) {}
-    }
-  }
-}
-
-// Top-level defensive tab fetcher (used by both init and refreshData)
-async function fetchDefTab(tab, retries) {
-  var url = defTabURL(tab);
-  for (var attempt = 0; attempt < (retries || 3); attempt++) {
-    var r = await fetch(url);
-    if (r.ok) return r.json();
-    if (r.status === 429) {
-      await new Promise(function(res) { setTimeout(res, (attempt+1)*3000); });
-      continue;
-    }
-    var body = '';
-    try { body = await r.text(); } catch(e) {}
-    throw new Error('HTTP ' + r.status + ' for "' + tab + '": ' + body.slice(0,200));
-  }
-  throw new Error('Retries exhausted for "' + tab + '"');
+function clearSnapshot() {
+  snapshot = null;
+  document.getElementById('snapBanner').style.display = 'none';
+  document.getElementById('snapshotBtn').classList.remove('active');
+  document.getElementById('snapshotBtn').textContent = '📸 Snapshot';
+  document.getElementById('clearSnapBtn').style.display = 'none';
+  update();
 }
 
 async function refreshData() {
-  console.log('=== Real Value v3.8-DEF — refreshData starting ===');
-  console.log('DEF_TABS defined?', typeof DEF_TABS, DEF_TABS ? Object.keys(DEF_TABS) : 'UNDEFINED');
-  console.log('defTabURL defined?', typeof defTabURL);
   const btn = document.getElementById('refreshBtn');
   btn.textContent = '⏳ Loading...';
   btn.disabled = true;
   try {
-    // Fetch offensive data (existing)
     const [res, cRes] = await Promise.all([
       fetch(RATINGS_URL),
       fetch(CONTRACT_URL)
@@ -1070,81 +691,12 @@ async function refreshData() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ratingsRows = (await res.json()).values || [];
     const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
-    
-    console.log('DEF-CHECKPOINT-1: Offensive data loaded, ratings:', ratingsRows.length, 'contracts:', contractRows.length);
-
-    // Fetch defensive data (sequential to avoid 429)
-    let defData = null;
-    console.log('DEF: === STARTING DEFENSIVE PIPELINE ===');
-    console.log('DEF: Stats sheet ID:', STATS_SHEET_ID);
-    console.log('DEF: Sample URL:', defTabURL(DEF_TABS.trad));
-
-    try {
-      btn.textContent = '⏳ Defense...';
-      await new Promise(function(r) { setTimeout(r, 800); });
-
-      const tabKeys = Object.keys(DEF_TABS);
-      const tabResults = {};
-      for (let i = 0; i < tabKeys.length; i++) {
-        const tabName = DEF_TABS[tabKeys[i]];
-        console.log(`Fetching defense tab ${i+1}/${tabKeys.length}: "${tabName}"...`);
-        try {
-          tabResults[tabKeys[i]] = await fetchDefTab(tabName);
-          console.log(`  ✓ ${tabName}: ${tabResults[tabKeys[i]].values?.length || 0} rows`);
-        } catch (tabErr) {
-          console.log(`  ✗ ${tabName} FAILED:`, tabErr.message);
-          throw tabErr;
-        }
-        if (i < tabKeys.length - 1) await new Promise(r => setTimeout(r, 600));
-      }
-
-      const sheets = {};
-      for (const k of tabKeys) sheets[k] = parseDefSheet(tabResults[k]);
-      
-      console.log('=== DEFENSIVE DATA DEBUG ===');
-      for (const k of tabKeys) {
-        const s = sheets[k];
-        console.log(`  ${k}: ${s.headers.length} headers, ${s.rows.length} rows`, s.headers.slice(0,5));
-      }
-      if (sheets.defHist.rows[0]) console.log('  defHist row 0:', JSON.stringify(sheets.defHist.rows[0]));
-
-      // Compute live 2025-26 defensive scores
-      const liveScores = computeLiveDefScores(sheets.trad, sheets.adv, sheets.hustle, sheets.defTrk, sheets.teamAdv);
-
-      // Parse historical defensive scores
-      const histScores = parseDefHistory(sheets.defHist);
-
-      defData = { liveScores, histScores };
-      console.log(`Defense loaded: ${Object.keys(liveScores).length} live, ${Object.keys(histScores).length} history players`);
-      
-      // Show sample watermark data
-      const sampleNames = Object.keys(histScores).slice(0,3);
-      for (const n of sampleNames) console.log(`  ${n}: ${histScores[n].map(h => h.year+'='+h.score).join(', ')}`);
-    } catch (defErr) {
-      console.log('❌ DEF FETCH FAILED:', defErr.message);
-      console.log('DEF Stack:', defErr.stack);
-      console.log('DEF: Is Season Stats sheet shared? Sheet ID:', STATS_SHEET_ID);
-      // Continue without defense — formula falls back to pure offensive
-    }
-
-    appData = processData(ratingsRows, contractRows, defData);
+    appData = processData(ratingsRows, contractRows);
     buildStats(appData);
-    
-    // Auto-load previous day's snapshot for comparison (if no manual snapshot active)
-    loadPreviousSnapshot();
-    
     update();
-    
-    // Auto-save today's values
-    saveDaily();
-    
-    // Show defense status
-    const defStatus = defData ? `🛡️ DEF: ${Object.keys(defData.liveScores).length} live / ${Object.keys(defData.histScores).length} hist` : '⚠️ No defense';
     btn.textContent = '✅ Updated';
-    console.log(defStatus);
     setTimeout(() => { btn.textContent = '🔄 Refresh'; }, 1500);
   } catch(err) {
-    console.error('Refresh error:', err);
     btn.textContent = '❌ Error';
     setTimeout(() => { btn.textContent = '🔄 Refresh'; }, 2000);
   }
@@ -1171,7 +723,6 @@ function rankDelta(cur, prev) {
 }
 
 function fmt$(n) { const a=Math.abs(n); if(a>=1e6)return(n<0?'-':'')+'$'+(a/1e6).toFixed(1)+'M'; if(a>=1e3)return(n<0?'-':'')+'$'+(a/1e3).toFixed(0)+'K'; return '$'+n.toLocaleString(); }
-function fmtK$(n) { const a=Math.abs(n); if(a>=1e6)return '$'+(a/1e6).toFixed(1)+'M'; return '$'+Math.round(a/1e3)+'K'; }
 function fmtFull$(n) { return (n<0?'-$':'$')+Math.abs(n).toLocaleString(); }
 function ratCls(r) { return r>=18?'rat-elite':r>=12?'rat-star':r>=6?'rat-solid':r>=2?'rat-avg':'rat-low'; }
 function rankCls(r) { return r<=5?'rank-top5':r<=20?'rank-top20':r<=50?'rank-top50':''; }
@@ -1198,19 +749,19 @@ function renderTable(players) {
   document.getElementById('tableBody').innerHTML = players.map((p,i) => {
     const pct = Math.min(Math.abs(p.surplus)/maxS*50, 50);
     const bc = p.surplus>=0?'positive':'negative';
+    const s = snapshot ? snapshot[p.player] : null;
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
-      <td class="col-rank ${rankCls(p.rank)}">${p.rank}</td>
+      <td class="col-rank ${rankCls(p.rank)}">${p.rank}${s ? rankDelta(p.rank, s.rank) : ''}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
-      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.defMult !== 1.0 ? `<br><span class="tt-label">Def mult:</span> <span class="tt-val" style="color:${p.defMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">×${p.defMult.toFixed(3)}</span> <span class="tt-label">(${p.defComposite.toFixed(1)} pts)</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
-      <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}</td>
-      <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
+      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
+      <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}${s ? deltaHTML(p.rat365, s.rat365, false) : ''}</td>
+      <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}${s ? deltaHTML(p.watermark, s.watermark, false) : ''}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
-      <td class="col-num col-real-value">${fmtFull$(p.tradeValue)}</td>
-      <td class="col-num">${p.rvDelta !== 0 ? `<span class="delta ${p.rvDelta>0?'delta-up':'delta-down'}">${p.rvDelta>0?'▲':'▼'}${fmtK$(Math.abs(p.rvDelta))}</span>` : ''}</td>
-      <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text-secondary)'}">${p.category}</td>
-      <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span></div></td>
-      <td class="col-num wm-detail ${p.tvPerYear>0?'surplus-pos':p.tvPerYear<0?'surplus-neg':''}">${p.tvPerYear!==0 ? ((p.tvPerYear>0?'+':'')+fmt$(p.tvPerYear)) : '—'}${(p.contractYears.length || p.rfaYears.length || p.ufaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}${p.ufaYears.length ? `<br><span class="tt-label" style="color:var(--text-muted)">— UFA Projected (market rate) —</span><br>${p.ufaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val">${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
-      <td class="col-num" style="font-size:0.75rem;color:var(--text-muted)">${p.contractEnd >= 2027 ? p.contractEnd : 'EXP'}${p.rfaYears.length ? ' <span style="color:var(--accent-gold)">RFA</span>' : ''}${p.ufaYears.length ? ' <span style="color:var(--text-muted)">UFA</span>' : ''}${p.poDeclined ? ' <span style="color:var(--accent)">PO↗</span>' : ''}${p.toDeclined ? ' <span style="color:var(--surplus-neg)">TO✗</span>' : ''}</td>
+      <td class="col-num col-real-value">${fmtFull$(p.tradeValue)}${s ? deltaHTML(p.uncappedTV, s.tv, false) : ''}</td>
+      <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text2)'}">${p.category}</td>
+      <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span>${s ? deltaHTML(p.surplus, s.surplus, false) : ''}</div></td>
+      <td class="col-num wm-detail ${p.contractTV>0?'surplus-pos':p.contractTV<0?'surplus-neg':''}"><span style="font-weight:700">${p.contractTV!==0 ? ((p.contractTV>0?'+':'')+fmt$(p.contractTV)) : '—'}</span>${(p.contractYears.length || p.rfaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
+      <td class="col-num" style="font-size:0.75rem;color:var(--text-muted)">${p.contractEnd >= 2027 ? p.contractEnd : 'EXP'}${p.rfaYears.length ? ' <span style="color:var(--accent-gold)">RFA</span>' : ''}${p.poDeclined ? ' <span style="color:var(--accent)">PO↗</span>' : ''}${p.toDeclined ? ' <span style="color:var(--surplus-neg)">TO✗</span>' : ''}</td>
     </tr>`;
   }).join('');
 }
@@ -1220,13 +771,6 @@ function update() {
   const search = document.getElementById('searchInput').value.toLowerCase();
   const team = document.getElementById('teamFilter').value;
   const [sortKey, sortDir] = document.getElementById('sortSelect').value.split('-');
-  
-  // Compute rvDelta for each player from daily snapshot
-  for (const p of appData.players) {
-    const s = dailySnap ? dailySnap[p.player] : null;
-    p.rvDelta = (s && s.tv != null) ? p.uncappedTV - s.tv : 0;
-  }
-  
   let f = appData.players.filter(p => {
     if (team && p.team !== team) return false;
     if (search && !p.player.toLowerCase().includes(search) && !p.team.toLowerCase().includes(search)) return false;
@@ -1252,33 +796,7 @@ async function init() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ratingsRows = (await res.json()).values || [];
     const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
-
-    // Fetch defensive data (sequential with delays to avoid 429)
-    let defData = null;
-    try {
-      // Wait after offensive fetch to avoid rate limiting
-      await new Promise(function(r) { setTimeout(r, 800); });
-      console.log('DEF: Starting defensive pipeline...');
-      const tabKeys = Object.keys(DEF_TABS);
-      const tabResults = {};
-      for (let i = 0; i < tabKeys.length; i++) {
-        const tabName = DEF_TABS[tabKeys[i]];
-        console.log('DEF: fetch ' + (i+1) + '/' + tabKeys.length + ': "' + tabName + '"');
-        tabResults[tabKeys[i]] = await fetchDefTab(tabName);
-        console.log('DEF: ✓ ' + tabName + ': ' + (tabResults[tabKeys[i]].values?.length || 0) + ' rows');
-        if (i < tabKeys.length - 1) await new Promise(function(r) { setTimeout(r, 600); });
-      }
-      const sheets = {};
-      for (const k of tabKeys) sheets[k] = parseDefSheet(tabResults[k]);
-      const liveScores = computeLiveDefScores(sheets.trad, sheets.adv, sheets.hustle, sheets.defTrk, sheets.teamAdv);
-      const histScores = parseDefHistory(sheets.defHist);
-      defData = { liveScores, histScores };
-      console.log('DEF: Loaded ' + Object.keys(liveScores).length + ' live, ' + Object.keys(histScores).length + ' history');
-    } catch (defErr) {
-      console.log('DEF: Failed (non-fatal):', defErr.message);
-    }
-
-    appData = processData(ratingsRows, contractRows, defData);
+    appData = processData(ratingsRows, contractRows);
 
     document.getElementById('loadingArea').style.display = 'none';
     document.getElementById('tableContainer').style.display = 'block';
@@ -1288,20 +806,16 @@ async function init() {
 
     buildStats(appData);
     buildTeams(appData);
-    
-    // Auto-load previous day's snapshot for comparison
-    loadPreviousSnapshot();
-    
     update();
-    
-    // Auto-save today's values
-    saveDaily();
 
     document.getElementById('searchInput').addEventListener('input', update);
     document.getElementById('teamFilter').addEventListener('change', update);
     document.getElementById('sortSelect').addEventListener('change', update);
+    document.getElementById('snapshotBtn').disabled = false;
     document.getElementById('refreshBtn').disabled = false;
+    document.getElementById('snapshotBtn').addEventListener('click', takeSnapshot);
     document.getElementById('refreshBtn').addEventListener('click', refreshData);
+    document.getElementById('clearSnapBtn').addEventListener('click', clearSnapshot);
   } catch(err) {
     document.getElementById('loadingArea').innerHTML =
       `<div class="error-msg"><p>⚠️ Failed to fetch data: ${err.message}</p><p style="color:var(--text-muted);margin-top:0.5rem;font-size:0.85rem;">Make sure the Google Sheet is published: File → Share → Publish to web → Entire Document</p></div>`;
