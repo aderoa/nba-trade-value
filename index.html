@@ -127,7 +127,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.9</span>
+      <span class="tag">v3.1</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -230,7 +230,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.9 — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.1 — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -398,9 +398,14 @@ function processData(rows, contractRows) {
     }
     const fullWM = den > 0 ? num / den : 0;
     const priorWM = priorDen > 0 ? priorNum / priorDen : 0;
-    // Injury protection: if current season drags watermark below historical, use historical + 5% boost
-    // (injured players' trade value reflects what they CAN do, with a slight premium for proven track record)
-    p.watermark = (priorDen > 0 && fullWM < priorWM) ? priorWM * 1.05 : fullWM;
+    // Injury protection: only kicks in for drops > 5% (filters out natural variance)
+    if (priorDen > 0 && fullWM < priorWM * 0.95) {
+      const dropPct = 1 - (fullWM / priorWM); // e.g. 0.10 = 10% drop, 0.50 = 50% drop
+      const boost = dropPct > 0.20 ? 1.0 + dropPct * 0.12 : 1.0; // graduated boost for severe drops only
+      p.watermark = priorWM * boost;
+    } else {
+      p.watermark = fullWM;
+    }
 
     const cur = hist.filter(h => h.year === CUR_YEAR);
     p.curGames = cur.reduce((s,h) => s+h.games, 0);
