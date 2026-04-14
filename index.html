@@ -127,7 +127,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.4</span>
+      <span class="tag">v2.5</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -213,14 +213,14 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
     <p>Real values are distributed from a <strong style="color:var(--text)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
     <p>The <strong style="color:var(--text)">Watermark</strong> rating uses a time-decay weighted average: each game's per-game RAT contributes weighted by its season's recency — 2025-26 at full weight (1.0), then decaying by 0.6× per year back (0.6, 0.36, 0.216, 0.13). Recent performance matters most while still crediting a strong track record. Hover over any Watermark to see the per-season breakdown.</p>
     <p>The final Real Value is an <strong style="color:var(--text)">85/15 blend</strong>: 85% from the Watermark-based distribution and 15% from the RAT 365-based distribution. Both distributions use a <strong>soft-capped exponent</strong> <code>r^3.2 / (1 + r^3.2/14000)</code>, creating a steep progressive curve that rewards elite production while compressing extreme outliers at the top.</p>
-    <p>A <strong style="color:var(--text)">games-played correction</strong> is applied per-season to compensate for the Global Rating's built-in availability penalty. For each season, the per-game average is adjusted by <code>(expected / actual)^0.8</code>, capped at 1.4× and only for players with ≥40% of expected games. However, this correction <strong style="color:var(--text)">fades with age</strong>: players over 28 receive progressively less GP correction, reflecting that older players are more likely to suffer recurring or decline-related injuries. The boost portion decays by <code>e^(-0.12 × (age − 28))</code>, so a 35-year-old retains only ~43% of the correction a younger player would get.</p>
+    <p>A <strong style="color:var(--text)">games-played correction</strong> is applied per-season to compensate for the Global Rating's built-in availability penalty. For each season, the per-game average is adjusted by <code>(expected / actual)^0.8</code>, capped at 1.8× (floor 1.0×) and only for players with ≥25% of expected games. However, this correction <strong style="color:var(--text)">fades with age</strong>: players over 28 receive progressively less GP correction, reflecting that older players are more likely to suffer recurring or decline-related injuries. The boost portion decays by <code>e^(-0.12 × (age − 28))</code>, so a 35-year-old retains only ~43% of the correction a younger player would get.</p>
     <p>An <strong style="color:var(--text)">age factor</strong> rewards youth and mildly penalizes age. Players below the league average age (~26.5) receive up to a 2× bonus scaling linearly to the youngest player. Players 35 and older receive a 3% penalty per year over 35 (floor 0.5×). Players between average and 35 are unaffected. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
     <p>A <strong style="color:var(--accent-gold)">potential bonus</strong> (up to $18M) is added for players under 25, based on their draft position and age. Both factors use exponential decay: earlier draft picks and younger ages receive larger bonuses, with bigger gaps at the top (e.g., the difference between pick 1 and 2 is larger than between picks 59 and 60). Hover over the Age column to see the potential bonus breakdown.</p>
     <p>The distribution uses a <strong style="color:var(--accent-gold)">soft-capped exponent</strong> — <code>score = r^3.2 / (1 + r^3.2 / 14000)</code> — instead of a plain power curve. For mid-tier players, this behaves like a normal r^3.2 distribution, creating enough separation to push ~32 players above max-contract thresholds. For elite outliers, the denominator grows, compressing the very top so no player exceeds ~$95M. The total always equals the salary pool by construction.</p>
     <p><strong style="color:var(--accent)">Trade Value</strong> measures a player's contract-adjusted worth, starting from the 2025-26 surplus. It takes the Real Value as a percentage of the current salary cap, then projects it forward for each remaining contract year using <strong>projected future caps</strong> and a <strong>5% per year wear-and-tear discount</strong> on signed contract years — reflecting the risk of being locked into a guaranteed salary. <strong>Player Options</strong>: if projected value exceeds option salary, the player declines (<span style="color:var(--accent)">PO↗</span>). <strong>Team Options</strong>: if option salary exceeds projected value, the team declines (<span style="color:var(--surplus-neg)">TO✗</span>). <strong>Restricted Free Agents</strong> (YOS ≤ 4 at contract end with positive surplus) get 3 projected years at market salary with 8% raises, at full value with no wear-and-tear (<span style="color:var(--accent-gold)">RFA</span>). The league-wide sum of all Trade Values is normalized to $0.</p>
     <div class="formula-block">
       <span class="step-label">Step 1</span>&nbsp; Watermark = Σ(weight × games × corrected RAT/g) ÷ Σ(weight × games) — time-decay per season<br>
-      <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × (1 + (min(1.4, (exp/act)^0.8) − 1) × ageFade) &nbsp;|&nbsp; ageFade = e<sup>-0.12(age-28)</sup> if age &gt; 28, else 1.0<br>
+      <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × (1 + (min(1.8, (exp/act)^0.8) − 1) × ageFade) &nbsp;|&nbsp; ageFade = e<sup>-0.12(age-28)</sup> if age &gt; 28, else 1.0<br>
       <span class="step-label">Step 3</span>&nbsp; score(r) = r^3.2 ÷ (1 + r^3.2 / 14000) &nbsp;|&nbsp; TV<sub>WM</sub> = (score(WM) ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (score(RAT365) ÷ Σ) × Pool<br>
       <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 85% × TV<sub>WM</sub> + 15% × TV<sub>RAT</sub><br>
       <span class="step-label">Step 5</span>&nbsp; Age factor (youth +100%, 35+ −3%/yr) → normalize to Pool<br>
@@ -230,7 +230,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.4 — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.5 — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
