@@ -127,7 +127,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.8</span>
+      <span class="tag">v2.9</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -230,7 +230,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.8 — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.9 — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -398,8 +398,9 @@ function processData(rows, contractRows) {
     }
     const fullWM = den > 0 ? num / den : 0;
     const priorWM = priorDen > 0 ? priorNum / priorDen : 0;
-    // Injury protection: if current season drags watermark below historical, use historical
-    p.watermark = (priorDen > 0 && fullWM < priorWM) ? priorWM : fullWM;
+    // Injury protection: if current season drags watermark below historical, use historical + 5% boost
+    // (injured players' trade value reflects what they CAN do, with a slight premium for proven track record)
+    p.watermark = (priorDen > 0 && fullWM < priorWM) ? priorWM * 1.05 : fullWM;
 
     const cur = hist.filter(h => h.year === CUR_YEAR);
     p.curGames = cur.reduce((s,h) => s+h.games, 0);
