@@ -250,7 +250,7 @@ const OLD_PENALTY_PER_YEAR = 0.03;
 const OLD_FLOOR = 0.50;
 const GAMES_BETA = 0.8;
 const GAMES_MAX_MULT = 1.4;
-const GAMES_MIN_PCT = 0.40;
+const GAMES_MIN_PCT = 0.25;
 const GP_AGE_THRESHOLD = 28; // Age at which GP correction starts fading
 const GP_AGE_DECAY = 0.12; // Exponential decay rate per year over threshold
 
@@ -361,13 +361,12 @@ function processData(rows, contractRows) {
   const avgAge = ages.length > 0 ? ages.reduce((a,b) => a+b, 0) / ages.length : 26;
   const maxDevYoung = avgAge - Math.min(...ages);
 
-  // GP correction helper — fades the boost for players over GP_AGE_THRESHOLD
+  // GP correction helper — boosts players who missed time, never penalizes healthy players
   function gpCorr(rawPerGame, expected, actual, playerAge) {
     const pct = actual / expected;
     if (pct < GAMES_MIN_PCT) return rawPerGame;
-    const rawMult = Math.min(GAMES_MAX_MULT, Math.pow(expected / actual, GAMES_BETA));
+    const rawMult = Math.max(1.0, Math.min(GAMES_MAX_MULT, Math.pow(expected / actual, GAMES_BETA)));
     if (playerAge !== null && playerAge > GP_AGE_THRESHOLD) {
-      // Decay the boost portion (amount above 1.0) by age
       const fade = Math.exp(-GP_AGE_DECAY * (playerAge - GP_AGE_THRESHOLD));
       const boost = (rawMult - 1.0) * fade;
       return rawPerGame * (1.0 + boost);
@@ -398,7 +397,7 @@ function processData(rows, contractRows) {
     p.curGames = cur.reduce((s,h) => s+h.games, 0);
     p.expGames = EXPECTED[CUR_YEAR];
     if (p.curGames > 0 && (p.curGames/p.expGames) >= GAMES_MIN_PCT) {
-      const rawMult = Math.min(GAMES_MAX_MULT, Math.pow(p.expGames/p.curGames, GAMES_BETA));
+      const rawMult = Math.max(1.0, Math.min(GAMES_MAX_MULT, Math.pow(p.expGames/p.curGames, GAMES_BETA)));
       if (p.age !== null && p.age > GP_AGE_THRESHOLD) {
         const fade = Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD));
         p.gamesCorr = 1.0 + (rawMult - 1.0) * fade;
@@ -421,7 +420,7 @@ function processData(rows, contractRows) {
     if (p.curGames > 0) {
       const pct = p.curGames / EXPECTED[CUR_YEAR];
       if (pct >= GAMES_MIN_PCT) {
-        const rawMult = Math.min(GAMES_MAX_MULT, Math.pow(EXPECTED[CUR_YEAR]/p.curGames, GAMES_BETA));
+        const rawMult = Math.max(1.0, Math.min(GAMES_MAX_MULT, Math.pow(EXPECTED[CUR_YEAR]/p.curGames, GAMES_BETA)));
         if (p.age !== null && p.age > GP_AGE_THRESHOLD) {
           const fade = Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD));
           p.rat365adj = p.rat365 * (1.0 + (rawMult - 1.0) * fade);
@@ -434,7 +433,7 @@ function processData(rows, contractRows) {
       const pg = prev.reduce((s,h) => s+h.games, 0) || 82;
       const pct = pg / 82;
       if (pct >= GAMES_MIN_PCT) {
-        const rawMult = Math.min(GAMES_MAX_MULT, Math.pow(82/pg, GAMES_BETA));
+        const rawMult = Math.max(1.0, Math.min(GAMES_MAX_MULT, Math.pow(82/pg, GAMES_BETA)));
         if (p.age !== null && p.age > GP_AGE_THRESHOLD) {
           const fade = Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD));
           p.rat365adj = p.rat365 * (1.0 + (rawMult - 1.0) * fade);
