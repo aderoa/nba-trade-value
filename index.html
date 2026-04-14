@@ -127,7 +127,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v3.3</span>
+      <span class="tag">v3.4</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -223,14 +223,14 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
       <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × (1 + (min(2.5, (exp/act)^0.8) − 1) × ageFade) &nbsp;|&nbsp; ageFade = e<sup>-0.12(age-28)</sup> if age &gt; 28, else 1.0<br>
       <span class="step-label">Step 3</span>&nbsp; score(r) = r^3.2 ÷ (1 + r^3.2 / 14000) &nbsp;|&nbsp; TV<sub>WM</sub> = (score(WM) ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (score(RAT365) ÷ Σ) × Pool<br>
       <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 92% × TV<sub>WM</sub> + 8% × TV<sub>RAT</sub><br>
-      <span class="step-label">Step 5</span>&nbsp; Age factor (youth +100%, 35+ −3%/yr) → normalize to Pool<br>
+      <span class="step-label">Step 5</span>&nbsp; Age factor (youth +100%, 35+ −3%/yr) + Defense SC/MPG adj (±4%) → normalize to Pool<br>
       <span class="step-label">Step 6</span>&nbsp; Potential bonus = $18M × e<sup>-0.05(pick-1)</sup> × e<sup>-0.5(age-18.82)</sup> (under 25 only)<br>
       <span class="step-label">Step 7</span>&nbsp; Trade Value = Surplus<sub>25-26</sub> + Σ<sub>contract years</sub> ((RV ÷ Cap<sub>cur</sub>) × Cap<sub>proj</sub> × 0.95<sup>years out</sup> − Salary) + Σ<sub>RFA years</sub> (full projected − salary)
     </div>
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.3 — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.4 — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -240,6 +240,7 @@ const CONTRACT_TAB = 'Sheet6';
 const SHEETS_API = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values`;
 const RATINGS_URL = `${SHEETS_API}/${RATINGS_TAB}?key=${API_KEY}`;
 const CONTRACT_URL = `${SHEETS_API}/${CONTRACT_TAB}?key=${API_KEY}`;
+const DEFENSE_URL = '/api/defense-data'; // SC/MPG defensive metric (same origin on hoopsmatic.com)
 const EXPONENT = 3.2;
 const KNEE = 14000; // Soft-cap: score = r^EXP / (1 + r^EXP / KNEE)
 const WM_WEIGHT = 0.92;
@@ -307,12 +308,39 @@ function parseCSV(text) {
   return rows;
 }
 
-function processData(rows, contractRows) {
+function processData(rows, contractRows, defenseRows) {
   const dataRows = rows.slice(1);
   const roster = [], historical = [];
   let todayStr = null;
   const shootingMap = {};
   const expMap = {};
+
+  // Parse defense data for SC/MPG adjustment
+  const defenseMap = {}; // playerName -> SC/MPG ratio
+  if (defenseRows && defenseRows.length > 1) {
+    const defHeaders = defenseRows[0].map(h => (h||'').trim().toUpperCase());
+    // Find columns: look for SC/MPG combined column, or separate SC and MPG columns
+    const scMpgCol = defHeaders.findIndex(h => h.includes('SC') && h.includes('MPG'));
+    const scCol = scMpgCol < 0 ? defHeaders.findIndex(h => h === 'SC' || h === 'STOCKS' || h === 'STL+BLK') : -1;
+    const mpgCol = scMpgCol < 0 ? defHeaders.findIndex(h => h === 'MPG' || h === 'MIN' || h === 'MINUTES') : -1;
+    const nameCol = defHeaders.findIndex(h => h === 'PLAYER' || h === 'NAME');
+    if (nameCol >= 0) {
+      for (let i = 1; i < defenseRows.length; i++) {
+        const r = defenseRows[i];
+        if (!r || !r[nameCol]) continue;
+        const name = r[nameCol].trim();
+        let ratio;
+        if (scMpgCol >= 0) {
+          ratio = parseFloat(r[scMpgCol]);
+        } else if (scCol >= 0 && mpgCol >= 0) {
+          const sc = parseFloat(r[scCol]), mpg = parseFloat(r[mpgCol]);
+          ratio = (mpg > 0) ? sc / mpg : 0;
+        }
+        if (ratio && !isNaN(ratio) && ratio > 0) defenseMap[name] = ratio;
+      }
+    }
+    console.log(`[Defense] Loaded ${Object.keys(defenseMap).length} players with SC/MPG data`);
+  }
 
   for (const row of dataRows) {
     while (row.length < 21) row.push('');
@@ -477,7 +505,7 @@ function processData(rows, contractRows) {
     }
   }
 
-  // Real value: 92/8 blend × age multiplier × shooting penalty, then renormalize to pool
+  // Real value: 92/8 blend × age multiplier × shooting penalty × defense adjustment, then renormalize to pool
   // Soft-capped exponent: compresses elite outliers while preserving mid-tier separation
   function softScore(r) { const s = Math.pow(Math.max(r, 0), EXPONENT); return s / (1.0 + s / KNEE); }
   const totalAdjWM = roster.reduce((s,p) => s + softScore(p.watermark), 0);
@@ -489,7 +517,13 @@ function processData(rows, contractRows) {
     // Shooting penalty: decrease by (value × 100)%
     p.shootingPenalty = (shootingMap[p.player] || 0) * 2;
     p.shootingMult = 1 - p.shootingPenalty;
-    p.tvWithAge = p.tvPreAge * p.ageMult * p.shootingMult;
+    // Defensive SC/MPG adjustment: ±4% based on stocks per minute vs league average
+    const defVals = Object.values(defenseMap);
+    const defAvg = defVals.length ? defVals.reduce((s,v) => s+v, 0) / defVals.length : 0;
+    const playerDef = defenseMap[p.player] || 0;
+    p.defenseAdj = (defAvg > 0 && playerDef > 0) ? Math.max(-0.04, Math.min(0.04, (playerDef - defAvg) / defAvg * 0.04)) : 0;
+    p.defenseMult = 1 + p.defenseAdj;
+    p.tvWithAge = p.tvPreAge * p.ageMult * p.shootingMult * p.defenseMult;
   }
   const totalWithAge = roster.reduce((s,p) => s + p.tvWithAge, 0);
   
@@ -706,14 +740,16 @@ async function refreshData() {
   btn.textContent = '⏳ Loading...';
   btn.disabled = true;
   try {
-    const [res, cRes] = await Promise.all([
+    const [res, cRes, dRes] = await Promise.all([
       fetch(RATINGS_URL),
-      fetch(CONTRACT_URL)
+      fetch(CONTRACT_URL),
+      fetch(DEFENSE_URL).catch(() => null)
     ]);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ratingsRows = (await res.json()).values || [];
     const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
-    appData = processData(ratingsRows, contractRows);
+    const defenseRows = (dRes && dRes.ok) ? ((await dRes.json()).values || []) : [];
+    appData = processData(ratingsRows, contractRows, defenseRows);
     buildStats(appData);
     update();
     btn.textContent = '✅ Updated';
@@ -775,7 +811,7 @@ function renderTable(players) {
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
       <td class="col-rank ${rankCls(p.rank)}">${p.rank}${s ? rankDelta(p.rank, s.rank) : ''}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
-      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
+      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.defenseAdj !== 0 ? `<br><span class="tt-label">Defense SC/MPG:</span> <span class="tt-val" style="color:${p.defenseAdj>0?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.defenseAdj>0?'+':''}${(p.defenseAdj*100).toFixed(2)}%</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}${s ? deltaHTML(p.rat365, s.rat365, false) : ''}</td>
       <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}${s ? deltaHTML(p.watermark, s.watermark, false) : ''}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
@@ -811,14 +847,16 @@ function update() {
 
 async function init() {
   try {
-    const [res, cRes] = await Promise.all([
+    const [res, cRes, dRes] = await Promise.all([
       fetch(RATINGS_URL),
-      fetch(CONTRACT_URL)
+      fetch(CONTRACT_URL),
+      fetch(DEFENSE_URL).catch(() => null) // soft dependency
     ]);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ratingsRows = (await res.json()).values || [];
     const contractRows = cRes.ok ? ((await cRes.json()).values || []) : [];
-    appData = processData(ratingsRows, contractRows);
+    const defenseRows = (dRes && dRes.ok) ? ((await dRes.json()).values || []) : [];
+    appData = processData(ratingsRows, contractRows, defenseRows);
 
     document.getElementById('loadingArea').style.display = 'none';
     document.getElementById('tableContainer').style.display = 'block';
