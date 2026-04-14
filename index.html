@@ -319,10 +319,11 @@ function processData(rows, contractRows, defenseRows) {
   const defenseMap = {}; // playerName -> SC/MPG ratio
   if (defenseRows && defenseRows.length > 1) {
     const defHeaders = defenseRows[0].map(h => (h||'').trim().toUpperCase());
-    // Find columns: look for SC/MPG combined column, or separate SC and MPG columns
+    // Find columns: SC/MPG combined, or compute from STL/G + BLK/G + MPG
     const scMpgCol = defHeaders.findIndex(h => h.includes('SC') && h.includes('MPG'));
-    const scCol = scMpgCol < 0 ? defHeaders.findIndex(h => h === 'SC' || h === 'STOCKS' || h === 'STL+BLK') : -1;
-    const mpgCol = scMpgCol < 0 ? defHeaders.findIndex(h => h === 'MPG' || h === 'MIN' || h === 'MINUTES') : -1;
+    const stlCol = defHeaders.findIndex(h => h.includes('STL'));
+    const blkCol = defHeaders.findIndex(h => h.includes('BLK'));
+    const mpgCol = defHeaders.findIndex(h => h === 'MPG' || h.includes('MIN'));
     const nameCol = defHeaders.findIndex(h => h === 'PLAYER' || h === 'NAME');
     if (nameCol >= 0) {
       for (let i = 1; i < defenseRows.length; i++) {
@@ -332,14 +333,14 @@ function processData(rows, contractRows, defenseRows) {
         let ratio;
         if (scMpgCol >= 0) {
           ratio = parseFloat(r[scMpgCol]);
-        } else if (scCol >= 0 && mpgCol >= 0) {
-          const sc = parseFloat(r[scCol]), mpg = parseFloat(r[mpgCol]);
-          ratio = (mpg > 0) ? sc / mpg : 0;
+        } else if (stlCol >= 0 && blkCol >= 0 && mpgCol >= 0) {
+          const stl = parseFloat(r[stlCol])||0, blk = parseFloat(r[blkCol])||0, mpg = parseFloat(r[mpgCol])||0;
+          ratio = mpg > 0 ? (stl + blk) / mpg : 0;
         }
         if (ratio && !isNaN(ratio) && ratio > 0) defenseMap[name] = ratio;
       }
     }
-    console.log(`[Defense] Loaded ${Object.keys(defenseMap).length} players with SC/MPG data`);
+    console.log(`[Defense] Parsed ${Object.keys(defenseMap).length} players (cols: SC/MPG=${scMpgCol}, STL=${stlCol}, BLK=${blkCol}, MPG=${mpgCol}, Name=${nameCol})`);
   }
 
   for (const row of dataRows) {
