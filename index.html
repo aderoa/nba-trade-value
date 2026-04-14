@@ -127,7 +127,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.7</span>
+      <span class="tag">v2.8</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -230,7 +230,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.7 — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.8 — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -460,6 +460,14 @@ function processData(rows, contractRows) {
       p.ageMult = Math.max(OLD_FLOOR, 1.0 - OLD_PENALTY_PER_YEAR * (p.age - OLD_THRESHOLD));
     } else {
       p.ageMult = 1.0;
+    }
+  }
+
+  // Injury protection for rat365adj: if current-season rating is far below
+  // historical watermark, use watermark as floor (player was injured, not declining)
+  for (const p of roster) {
+    if (p.rat365adj < p.watermark * 0.5) {
+      p.rat365adj = p.watermark;
     }
   }
 
