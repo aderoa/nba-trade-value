@@ -127,7 +127,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v2.6</span>
+      <span class="tag">v2.7</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -230,7 +230,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.6 — Live data via Google Sheets API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v2.7 — Live data via Google Sheets API</div>
 
 <script>
 const SHEETS_ID = '11llk0icQqoi0JwJXat5KO8y2RQeBMN5rS9FhAY56Idc';
@@ -381,6 +381,7 @@ function processData(rows, contractRows) {
   for (const p of roster) {
     const hist = playerHist[p.player.toLowerCase()] || [];
     let num = 0, den = 0;
+    let priorNum = 0, priorDen = 0; // Historical watermark excluding current season
     for (const h of hist) {
       const w = SEASON_WEIGHT[h.year] || 0;
       if (w <= 0 || h.games <= 0) continue;
@@ -390,8 +391,15 @@ function processData(rows, contractRows) {
       perGame = gpCorr(perGame, exp, h.games, p.age);
       num += perGame * w * h.games;
       den += w * h.games;
+      if (h.year !== CUR_YEAR) {
+        priorNum += perGame * w * h.games;
+        priorDen += w * h.games;
+      }
     }
-    p.watermark = den > 0 ? num / den : 0;
+    const fullWM = den > 0 ? num / den : 0;
+    const priorWM = priorDen > 0 ? priorNum / priorDen : 0;
+    // Injury protection: if current season drags watermark below historical, use historical
+    p.watermark = (priorDen > 0 && fullWM < priorWM) ? priorWM : fullWM;
 
     const cur = hist.filter(h => h.year === CUR_YEAR);
     p.curGames = cur.reduce((s,h) => s+h.games, 0);
