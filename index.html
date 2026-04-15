@@ -127,7 +127,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v4.0</span>
+      <span class="tag">v4.1</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -223,14 +223,14 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
       <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × (1 + (min(2.5, (exp/act)^0.8) − 1) × ageFade) &nbsp;|&nbsp; ageFade = e<sup>-0.12(age-28)</sup> if age &gt; 28, else 1.0<br>
       <span class="step-label">Step 3</span>&nbsp; score(r) = r^3.2 ÷ (1 + r^3.2 / 14000) &nbsp;|&nbsp; TV<sub>WM</sub> = (score(WM) ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (score(RAT365) ÷ Σ) × Pool<br>
       <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 92% × TV<sub>WM</sub> + 8% × TV<sub>RAT</sub><br>
-      <span class="step-label">Step 5</span>&nbsp; Defense SC/MPG adj (±3 WM pts) + Age factor (youth +85%, 35+ −3%/yr) → normalize to Pool<br>
+      <span class="step-label">Step 5</span>&nbsp; Defense SC/MPG adj (±1.5 WM pts) + Age factor (youth +85%, 35+ −3%/yr) → normalize to Pool<br>
       <span class="step-label">Step 6</span>&nbsp; Potential bonus = $18M × e<sup>-0.05(pick-1)</sup> × e<sup>-0.5(age-18.82)</sup> (under 25 only)<br>
       <span class="step-label">Step 7</span>&nbsp; Trade Value = Surplus<sub>25-26</sub> + Σ<sub>contract years</sub> ((RV ÷ Cap<sub>cur</sub>) × Cap<sub>proj</sub> × 0.95<sup>years out</sup> − Salary) + Σ<sub>RFA years</sub> (full projected − salary)
     </div>
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v4.0 — Live data via HoopsMatic API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v4.1 — Live data via HoopsMatic API</div>
 
 <script>
 // Data proxied through Worker — no Sheet IDs or API keys in client code
@@ -528,7 +528,7 @@ function processData(rows, contractRows, defenseMapInput) {
 
   // Defensive SC/MPG: additive bonus to watermark (compounds through 3.2 exponent)
   // Up to ±3 watermark points based on SC/MPG vs league average
-  const DEF_MAX_BONUS = 3.0;
+  const DEF_MAX_BONUS = 1.5;
   const defVals = Object.values(defenseMap);
   const defAvg = defVals.length ? defVals.reduce((s,v) => s+v, 0) / defVals.length : 0;
   for (const p of roster) {
