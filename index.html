@@ -127,7 +127,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v3.8</span>
+      <span class="tag">v4.0</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -230,14 +230,14 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v3.8 — Live data via HoopsMatic API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v4.0 — Live data via HoopsMatic API</div>
 
 <script>
 // Data proxied through Worker — no Sheet IDs or API keys in client code
 const PROXY_BASE = 'https://hoopsmatic.com';
 const RATINGS_URL = PROXY_BASE + '/api/rm-tv';
 const CONTRACT_URL = PROXY_BASE + '/api/rm-contracts';
-const DEFENSE_URL = PROXY_BASE + '/api/season-data?tab=rsStatsPerGame'; // per-game stats with STL, BLK, MIN
+const DEFENSE_URL = PROXY_BASE + '/api/defense-cache'; // SC/MPG cached by defense page
 
 // CSV parser for proxy endpoints
 function parseCSV(text) {
@@ -327,19 +327,18 @@ function parseCSV(text) {
   return rows;
 }
 
-function processData(rows, contractRows, defenseRows) {
+function processData(rows, contractRows, defenseMapInput) {
   const dataRows = rows.slice(1);
   const roster = [], historical = [];
   let todayStr = null;
   const shootingMap = {};
   const expMap = {};
 
-  // Parse defense data for SC/MPG adjustment
-  // Priority 1: SC/MPG column in Sheet3 (same data, no extra fetch)
-  // Priority 2: Defense API data (separate fetch)
-  const defenseMap = {}; // playerName -> SC/MPG ratio
+  // Defense SC/MPG map: either from cache (pre-computed) or from Sheet3 column
+  const defenseMap = Object.assign({}, defenseMapInput || {});
+  console.log('[Defense] Input map has', Object.keys(defenseMap).length, 'players');
   
-  // Scan Sheet3 headers for SC/MPG column
+  // Also scan Sheet3 headers for SC/MPG column (local override)
   if (dataRows.length > 0) {
     const headers = rows[0] || [];
     const scMpgIdx = headers.findIndex(h => {
@@ -347,50 +346,21 @@ function processData(rows, contractRows, defenseRows) {
       return (u.includes('SC') && u.includes('MPG')) || u === 'SC_MPG' || u === 'DEF_SCMPG';
     });
     if (scMpgIdx >= 0) {
-      // Find corresponding player name column (col 22 is the stats block player, or col 1 is roster player)
-      const nameIdx = scMpgIdx > 20 ? 22 : 1; // stats block uses col 22
+      const nameIdx = scMpgIdx > 20 ? 22 : 1;
       for (const row of dataRows) {
         const name = (row[nameIdx] || '').trim();
         const val = parseFloat(row[scMpgIdx]);
         if (name && !isNaN(val) && val > 0) defenseMap[name] = val;
       }
-      console.log('[Defense] Loaded ' + Object.keys(defenseMap).length + ' from Sheet3 col ' + scMpgIdx);
+      console.log('[Defense] Sheet3 override: ' + Object.keys(defenseMap).length + ' players from col ' + scMpgIdx);
     }
   }
   
-  // Fallback: defense API data
-  if (Object.keys(defenseMap).length === 0 && defenseRows && defenseRows.length > 1) {
-    const defHeaders = defenseRows[0].map(h => (h||'').trim().toUpperCase());
-    console.log('[Defense] API headers:', defenseRows[0].slice(0,10));
-    const scMpgCol = defHeaders.findIndex(h => h.includes('SC') && h.includes('MPG'));
-    const stlCol = defHeaders.findIndex(h => h === 'STL' || h === 'STL/G');
-    const blkCol = defHeaders.findIndex(h => h === 'BLK' || h === 'BLK/G');
-    const mpgCol = defHeaders.findIndex(h => h === 'MIN' || h === 'MPG' || h === 'MIN/G');
-    const nameCol = defHeaders.findIndex(h => h === 'PLAYER_NAME' || h === 'PLAYER' || h === 'NAME');
-    console.log('[Defense] API cols: SC/MPG=' + scMpgCol + ', STL=' + stlCol + ', BLK=' + blkCol + ', MPG=' + mpgCol + ', Name=' + nameCol);
-    if (nameCol >= 0) {
-      for (let i = 1; i < defenseRows.length; i++) {
-        const r = defenseRows[i];
-        if (!r || !r[nameCol]) continue;
-        const name = r[nameCol].trim();
-        let ratio;
-        if (scMpgCol >= 0) {
-          ratio = parseFloat(r[scMpgCol]);
-        } else if (stlCol >= 0 && blkCol >= 0 && mpgCol >= 0) {
-          const stl = parseFloat(r[stlCol])||0, blk = parseFloat(r[blkCol])||0, mpg = parseFloat(r[mpgCol])||0;
-          ratio = mpg > 0 ? (stl + blk) / mpg : 0;
-        }
-        if (ratio && !isNaN(ratio) && ratio > 0) defenseMap[name] = ratio;
-      }
-    }
-    console.log('[Defense] API parsed ' + Object.keys(defenseMap).length + ' players');
-  }
-  
-  if (Object.keys(defenseMap).length === 0) {
-    console.log('[Defense] No defense data available from Sheet3 or API');
-  } else {
+  if (Object.keys(defenseMap).length > 0) {
     const sample = Object.entries(defenseMap).slice(0,3);
     console.log('[Defense] Active: ' + Object.keys(defenseMap).length + ' players. Sample: ' + sample.map(([n,v]) => n + '=' + v.toFixed(4)).join(', '));
+  } else {
+    console.log('[Defense] No defense data — visit hoopsmatic.com/defense first to populate the cache');
   }
 
   for (const row of dataRows) {
@@ -805,9 +775,9 @@ async function refreshData() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ratingsRows = parseCSV(await res.text());
     const contractRows = cRes.ok ? parseCSV(await cRes.text()) : [];
-    let defenseRows = [];
-    if (dRes && dRes.ok) { defenseRows = parseCSV(await dRes.text()); }
-    appData = processData(ratingsRows, contractRows, defenseRows);
+    let defenseMap = {};
+    if (dRes && dRes.ok) { try { defenseMap = await dRes.json(); } catch(e) {} }
+    appData = processData(ratingsRows, contractRows, defenseMap);
     buildStats(appData);
     update();
     btn.textContent = '✅ Updated';
@@ -914,12 +884,12 @@ async function init() {
     const ratingsRows = parseCSV(await res.text());
     const contractRows = cRes.ok ? parseCSV(await cRes.text()) : [];
     console.log('[Defense] Fetch result:', dRes ? `status=${dRes.status}, ok=${dRes.ok}` : 'null (fetch failed)');
-    let defenseRows = [];
+    let defenseMap = {};
     if (dRes && dRes.ok) {
-      defenseRows = parseCSV(await dRes.text());
-      console.log('[Defense] Parsed CSV rows:', defenseRows.length);
+      try { defenseMap = await dRes.json(); console.log('[Defense] Cache has', Object.keys(defenseMap).length, 'players'); }
+      catch(e) { console.warn('[Defense] Parse error:', e.message); }
     }
-    appData = processData(ratingsRows, contractRows, defenseRows);
+    appData = processData(ratingsRows, contractRows, defenseMap);
 
     document.getElementById('loadingArea').style.display = 'none';
     document.getElementById('tableContainer').style.display = 'block';
