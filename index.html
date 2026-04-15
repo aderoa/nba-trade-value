@@ -127,7 +127,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v4.3</span>
+      <span class="tag">v4.4</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -230,7 +230,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v4.3 — Live data via HoopsMatic API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings v4.4 — Live data via HoopsMatic API</div>
 
 <script>
 // Data proxied through Worker — no Sheet IDs or API keys in client code
@@ -333,6 +333,7 @@ function processData(rows, contractRows, defenseMapInput) {
   let todayStr = null;
   const shootingMap = {};
   const expMap = {};
+  const usgMap = {};
 
   // Defense SC/MPG map: either from cache (pre-computed) or from Sheet3 column
   const defenseMap = Object.assign({}, defenseMapInput || {});
@@ -372,6 +373,7 @@ function processData(rows, contractRows, defenseMapInput) {
       roster.push({ team: row[0], player: row[1], rat365: parseFloat(row[2]) || 0, salary: parseInt(row[3].replace(/[$,]/g,'')) || 0, birthday: row[4] || '', draftPick: draftPick });
       // EXP column (index 19)
       if (row[19]) { const ev = parseInt(row[19]); if (!isNaN(ev)) expMap[row[1].trim()] = ev; }
+      if (row[22] && row[23]) { const uv = parseFloat(row[23]); if (!isNaN(uv) && uv > 0) usgMap[row[22].trim()] = uv; }
     }
     if (row[6] && row[7]) {
       const g = parseInt(row[9]) || 0;
@@ -552,6 +554,26 @@ function processData(rows, contractRows, defenseMapInput) {
     }
   }
   console.log('[Top20] Bonuses applied:', rat365Sorted.slice(0,20).map(p => p.player + ' +' + (p.top20Bonus||0)).join(', '));
+
+  // Offensive creation index: USG% × RAT365 rewards players who carry offensive load
+  // High-usage + high-production = harder to replace = premium value
+  const CREATION_TIERS = [{from:1,to:5,bonus:1.2},{from:6,to:10,bonus:0.9},{from:11,to:20,bonus:0.6},{from:21,to:30,bonus:0.3}];
+  const creationSorted = [...roster].filter(p => (usgMap[p.player]||0) > 0 && p.rat365 >= 8)
+    .map(p => ({...p, _ci: (usgMap[p.player]||0) * p.rat365}))
+    .sort((a,b) => b._ci - a._ci);
+  for (let i = 0; i < Math.min(30, creationSorted.length); i++) {
+    const cp = creationSorted[i];
+    const tier = CREATION_TIERS.find(t => (i+1) >= t.from && (i+1) <= t.to);
+    if (tier) {
+      const p = roster.find(r => r.player === cp.player);
+      if (p) {
+        p.creationBonus = tier.bonus;
+        p.watermark += tier.bonus;
+        p.rat365adj += tier.bonus;
+      }
+    }
+  }
+  console.log('[Creation] Top 10:', creationSorted.slice(0,10).map(p => p.player + ' ci=' + p._ci.toFixed(1)).join(', '));
 
   // Real value: 92/8 blend × age multiplier × shooting penalty, then renormalize to pool
   // Soft-capped exponent: compresses elite outliers while preserving mid-tier separation
