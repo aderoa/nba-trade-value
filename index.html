@@ -182,7 +182,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
 <div id="loadingArea">
   <div class="loading-overlay">
     <div class="spinner"></div>
-    <p>Fetching live data from Google Sheets...</p>
+    <p>Loading...</p>
   </div>
 </div>
 
@@ -950,7 +950,7 @@ async function init() {
     document.getElementById('clearSnapBtn').addEventListener('click', clearSnapshot);
   } catch(err) {
     document.getElementById('loadingArea').innerHTML =
-      `<div class="error-msg"><p>⚠️ Failed to fetch data: ${err.message}</p><p style="color:var(--text-muted);margin-top:0.5rem;font-size:0.85rem;">Make sure the Google Sheet is published: File → Share → Publish to web → Entire Document</p></div>`;
+      `<div class="error-msg"><p>⚠️ Failed to fetch data: ${err.message}</p><p style="color:var(--text-muted);margin-top:0.5rem;font-size:0.85rem;">Please try again later or contact support</p></div>`;
   }
 }
 init();
