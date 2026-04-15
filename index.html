@@ -181,7 +181,6 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
         <th style="text-align:right">Age</th>
         <th style="text-align:right">Real Value</th>
         <th style="text-align:right">Salary</th>
-        <th style="text-align:right">Evolution</th>
         <th style="text-align:center">Category</th>
         <th style="text-align:right">Surplus</th>
       </tr>
@@ -825,14 +824,12 @@ function renderTable(players) {
     else if (p.twoWay) cat = '<span style="color:var(--surplus-neg)">Two-Way</span>';
     else if (p.floored && p.uncappedTV < 2000000) cat = '<span style="color:var(--text-muted)">Minimum</span>';
     // Evolution: delta from snapshot
-    const evo = s ? deltaHTML(p.uncappedTV, s.tv, false) : '<span class="delta delta-flat">—</span>';
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
       <td class="col-rank ${rankCls(p.rank)}">${p.rank}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
       <td class="col-num" style="color:${p.age !== null && p.age < 25 ? 'var(--accent)' : 'var(--text)'}">${p.age!==null?p.age.toFixed(1):'\u2014'}</td>
       <td class="col-num col-real-value">${fmtFull$(p.uncappedTV)}</td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
-      <td class="col-num">${evo}</td>
       <td class="col-num" style="font-size:0.78rem;text-align:center">${cat}</td>
       <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span></div></td>
     </tr>`;
