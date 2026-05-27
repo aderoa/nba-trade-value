@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA Global Rating Plus — Hoopsmatic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* === HOOPSMATIC DESIGN SYSTEM v1.0 === */
+:root {
+  --bg: #f8f9fa; --surface: #fff; --surface2: #f3f4f6;
+  --border: #e2e5e9; --text: #1a1a2e; --text2: #5a6070; --text-muted: #8892a6;
+  --accent: #3b82f6; --accent-dim: rgba(59,130,246,0.07);
+  --accent-gold: #f0b637; --accent-cyan: #0ea5e9;
+  --green: #16a34a; --red: #dc2626; --orange: #f59e0b;
+  --surplus-pos: #10b981; --surplus-neg: #ef4444; --surplus-neutral: #6b7280;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; line-height:1.5; }
+::-webkit-scrollbar{height:5px;width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
+
+
+/* — Header — */
+.header { padding:1.5rem 2rem 0.75rem; }
+.header-inner { max-width:1400px; margin:0 auto; display:flex; align-items:baseline; gap:0.75rem; flex-wrap:wrap; }
+.header h1, .header-brand h1 { font-weight:800; font-size:1.5rem; letter-spacing:-0.02em; color:var(--text); }
+.header .tag { font-family:'JetBrains Mono','DM Mono',monospace; font-size:0.6rem; color:var(--accent); background:var(--accent-dim); padding:0.2em 0.6em; border-radius:4px; letter-spacing:0.04em; }
+.header-subtitle { color:var(--text2); font-size:0.85rem; }
+
+
+/* — Stat Cards — */
+.stats-bar { max-width:1400px; margin:1rem auto 0; padding:0 2rem; display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem 1.15rem; }
+.stat-card .label { font-family:'JetBrains Mono','DM Mono',monospace; font-size:0.6rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.2rem; }
+.stat-card .value { font-weight:700; font-size:1.35rem; color:var(--text); }
+.stat-card .value .unit { font-size:0.8rem; font-weight:400; color:var(--text2); }
+
+/* — Controls — */
+.controls { max-width:1400px; margin:1.25rem auto 0; padding:0 2rem; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; }
+.search-box { flex:1; min-width:200px; position:relative; }
+.search-box input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.55rem 0.85rem 0.55rem 2.3rem; color:var(--text); font-family:inherit; font-size:0.85rem; outline:none; transition:border-color 0.2s; }
+.search-box input:focus { border-color:var(--accent); }
+.search-box input::placeholder { color:var(--text-muted); }
+.search-box .icon { position:absolute; left:0.8rem; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:0.85rem; }
+.filter-group { display:flex; gap:0.5rem; align-items:center; }
+.filter-group label { font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; }
+select { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.55rem 0.85rem; color:var(--text); font-family:inherit; font-size:0.85rem; outline:none; cursor:pointer; }
+select:focus { border-color:var(--accent); }
+
+/* — Buttons — */
+.ctrl-btn { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem; color:var(--text); font-family:inherit; font-size:0.82rem; font-weight:500; cursor:pointer; transition:border-color 0.15s, background 0.15s; white-space:nowrap; }
+.ctrl-btn:hover:not(:disabled) { border-color:var(--accent); background:var(--accent-dim); }
+.ctrl-btn:disabled { opacity:0.4; cursor:default; }
+.ctrl-btn.active { border-color:var(--accent); background:var(--accent-dim); color:var(--accent); font-weight:600; }
+
+/* — Tables — */
+.table-container { max-width:1400px; margin:1.25rem auto 3rem; padding:0 2rem; overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+thead th { position:sticky; top:0; z-index:10; background:var(--surface2); font-family:'JetBrains Mono','DM Mono',monospace; font-size:0.62rem; font-weight:500; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); padding:0.6rem 0.5rem; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+thead th:hover { color:var(--accent); }
+tbody tr { border-bottom:1px solid var(--border); transition:background 0.12s; }
+tbody tr:hover { background:rgba(59,130,246,0.03); }
+tbody td { padding:0.55rem 0.5rem; vertical-align:middle; white-space:nowrap; }
+
+/* — Loading & Errors — */
+.loading-overlay, .loading-state { text-align:center; padding:4rem 2rem; color:var(--text2); }
+.loading-overlay .spinner, .loading-spinner { display:inline-block; width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:hmSpin 0.8s linear infinite; margin:0 auto 1rem; }
+@keyframes hmSpin { to { transform:rotate(360deg); } }
+.loading-overlay p { color:var(--text2); font-size:0.9rem; }
+.error-msg { color:var(--red); max-width:600px; margin:0 auto; text-align:center; }
+
+/* — Footer — */
+.footer { max-width:1400px; margin:0 auto; padding:1.5rem 2rem 2.5rem; text-align:center; font-size:0.75rem; color:var(--text-muted); border-top:1px solid var(--border); }
+.footer a, footer a { color:var(--accent); text-decoration:none; }
+
+/* — Responsive — */
+@media(max-width:900px) { .stats-bar{grid-template-columns:repeat(2,1fr);} .controls{flex-direction:column;} .search-box{min-width:100%;} }
+@media(max-width:600px) { .stats-bar{grid-template-columns:1fr 1fr;gap:0.5rem;} .stat-card{padding:0.75rem;} .stat-card .value{font-size:1.1rem;} .header{padding:1.25rem 1rem 1rem;} .header h1,.header-brand h1{font-size:1.25rem;} .table-container{padding:0 0.5rem;} td,th{padding:0.4rem 0.35rem;} }
+
+
+/* — Real Value specific — */
+.col-rank { width:55px; text-align:center; font-weight:700; font-size:0.95rem; }
+.rank-top5 { color:var(--accent-gold); }
+.rank-top20 { color:var(--accent); }
+.rank-top50 { color:var(--accent-cyan); }
+.col-player { min-width:200px; }
+.player-name { font-weight:600; font-size:0.88rem; }
+.player-team { font-size:0.72rem; color:var(--text2); margin-top:0.05rem; }
+.col-num { text-align:right; font-family:'JetBrains Mono',monospace; font-size:0.82rem; }
+.col-rat { font-weight:600; }
+.rat-elite { color:#b45309; } .rat-star { color:var(--accent); } .rat-solid { color:var(--accent-cyan); } .rat-avg { color:var(--text); } .rat-low { color:var(--text-muted); }
+.col-real-value { font-weight:700; font-size:0.85rem; }
+.surplus-pos { color:var(--surplus-pos); } .surplus-neg { color:var(--surplus-neg); } .surplus-neutral { color:var(--surplus-neutral); }
+.surplus-cell { display:flex; align-items:center; justify-content:flex-end; gap:0.6rem; }
+.surplus-bar-track { width:80px; height:6px; background:rgba(0,0,0,0.04); border-radius:3px; position:relative; overflow:hidden; }
+.surplus-bar { position:absolute; top:0; height:100%; border-radius:3px; }
+.surplus-bar.positive { left:50%; background:var(--surplus-pos); }
+.surplus-bar.negative { right:50%; background:var(--surplus-neg); }
+.surplus-bar-center { position:absolute; left:50%; top:-1px; bottom:-1px; width:1px; background:rgba(0,0,0,0.1); }
+.wm-detail { position:relative; cursor:help; }
+.wm-detail .wm-tooltip { display:none; position:absolute; right:0; top:100%; margin-top:4px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.6rem 0.85rem; z-index:20; white-space:nowrap; font-size:0.72rem; color:var(--text2); line-height:1.7; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.wm-detail:hover .wm-tooltip { display:block; }
+.wm-tooltip .tt-label { color:var(--text-muted); }
+.wm-tooltip .tt-val { color:var(--text); font-weight:500; }
+.methodology { max-width:1400px; margin:0 auto 3rem; padding:0 2rem; }
+.method-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1.75rem 2rem; }
+.method-card h3 { font-size:1rem; font-weight:700; color:var(--text2); margin-bottom:0.75rem; }
+.method-card p { color:var(--text2); font-size:0.85rem; line-height:1.65; max-width:960px; }
+.method-card p + p { margin-top:0.6rem; }
+.method-card code { font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--accent); background:var(--accent-dim); padding:0.15em 0.4em; border-radius:3px; }
+.formula-block { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:1rem 1.25rem; margin-top:1rem; font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--accent); line-height:1.8; }
+.formula-block .step-label { color:var(--text-muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; }
+tbody tr { animation:fadeInRow 0.25s ease both; }
+@keyframes fadeInRow { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+.snap-banner { max-width:1400px; margin:0.75rem auto 0; padding:0 2rem; }
+.snap-banner-inner { background:var(--accent-dim); border:1px solid rgba(59,130,246,0.15); border-radius:8px; padding:0.5rem 1rem; font-size:0.8rem; color:var(--accent); display:flex; align-items:center; gap:0.5rem; }
+.delta { font-size:0.68rem; font-family:'JetBrains Mono',monospace; margin-left:4px; }
+.delta-up { color:var(--surplus-pos); } .delta-down { color:var(--surplus-neg); } .delta-flat { color:var(--text-muted); }
+@media(max-width:600px) { .surplus-bar-track{display:none;} }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <h1>NBA Global Rating Plus</h1>
+      <span class="tag">v4.4</span>
+    </div>
+    <p class="header-subtitle">Global Rating with rolling last-365-days defensive ranking incorporated — all official games (Regular Season, NBA Cup, Play-In, Playoffs)</p>
+  </div>
+</div>
+
+<div class="stats-bar" id="statsBar">
+  <div class="stat-card"><div class="label">Loading...</div><div class="value">—</div></div>
+  <div class="stat-card"><div class="label">Loading...</div><div class="value">—</div></div>
+  <div class="stat-card"><div class="label">Loading...</div><div class="value">—</div></div>
+  <div class="stat-card"><div class="label">Loading...</div><div class="value">—</div></div>
+</div>
+
+<div class="controls">
+  <div class="search-box">
+    <span class="icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search player or team..." disabled>
+  </div>
+  <div class="filter-group">
+    <label>Team</label>
+    <select id="teamFilter" disabled><option value="">All Teams</option></select>
+  </div>
+  <div class="filter-group">
+    <label>Sort</label>
+    <select id="sortSelect" disabled>
+      <option value="uncappedTV-desc">Global Rating+ ↓</option>
+      <option value="uncappedTV-asc">Global Rating+ ↑</option>
+      <option value="def365Score-desc">Def 365 ↓</option>
+      <option value="def365Score-asc">Def 365 ↑</option>
+      <option value="contractTV-desc">Trade Value ↓</option>
+      <option value="contractTV-asc">Trade Value ↑</option>
+      <option value="surplus-desc">Surplus ↓</option>
+      <option value="surplus-asc">Surplus ↑</option>
+      <option value="watermark-desc">Watermark ↓</option>
+      <option value="watermark-asc">Watermark ↑</option>
+      <option value="rat365-desc">RAT 365 ↓</option>
+      <option value="rat365-asc">RAT 365 ↑</option>
+      <option value="salary-desc">Salary ↓</option>
+      <option value="salary-asc">Salary ↑</option>
+      <option value="age-asc">Age ↑ (youngest)</option>
+      <option value="age-desc">Age ↓ (oldest)</option>
+    </select>
+  </div>
+  <div class="filter-group" style="margin-left:auto;">
+    <button id="snapshotBtn" class="ctrl-btn" disabled>📸 Snapshot</button>
+    <button id="refreshBtn" class="ctrl-btn" disabled>🔄 Refresh</button>
+    <button id="clearSnapBtn" class="ctrl-btn" style="display:none">✕ Clear</button>
+  </div>
+</div>
+
+<div class="snap-banner" id="snapBanner" style="display:none">
+  <div class="snap-banner-inner">📸 Snapshot locked — update your sheet, then hit <strong>Refresh</strong> to see changes</div>
+</div>
+
+<div id="loadingArea">
+  <div class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+</div>
+
+<div class="table-container" style="display:none" id="tableContainer">
+  <table>
+    <thead>
+      <tr>
+        <th class="col-rank">#</th>
+        <th>Player</th>
+        <th style="text-align:right">Age</th>
+        <th style="text-align:right">RAT 365</th>
+        <th style="text-align:right">Watermark</th>
+        <th style="text-align:right">Salary</th>
+        <th style="text-align:right" title="Defensive_365 composite score (≈15 avg, mid-20s elite, low-30s DPOY-level)">Def 365</th>
+        <th style="text-align:right">Global Rating+</th>
+        <th style="text-align:center">Category</th>
+        <th style="text-align:right">Surplus</th>
+        <th style="text-align:right">Trade Value</th>
+        <th style="text-align:center">End</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<div class="methodology">
+  <div class="method-card">
+    <h3>Methodology</h3>
+    <p>Real values are distributed from a <strong style="color:var(--text)">fixed salary pool</strong> equal to the sum of every current NBA salary. No money is created or removed — the system only redistributes existing salary based on performance.</p>
+    <p>The <strong style="color:var(--text)">Watermark</strong> rating uses a time-decay weighted average: each game's per-game RAT contributes weighted by its season's recency — 2025-26 at full weight (1.0), then decaying by 0.6× per year back (0.6, 0.36, 0.216, 0.13). Recent performance matters most while still crediting a strong track record. Hover over any Watermark to see the per-season breakdown.</p>
+    <p>The final Real Value is an <strong style="color:var(--text)">92/8 blend</strong>: 92% from the Watermark-based distribution and 8% from the RAT 365-based distribution. Both distributions use a <strong>soft-capped exponent</strong> <code>r^3.2 / (1 + r^3.2/14000)</code>, creating a steep progressive curve that rewards elite production while compressing extreme outliers at the top.</p>
+    <p>A <strong style="color:var(--text)">games-played correction</strong> is applied per-season to compensate for the Global Rating's built-in availability penalty. For each season, the per-game average is adjusted by <code>(expected / actual)^0.8</code>, capped at 2.5× (floor 1.0×) and only for players with ≥25% of expected games. However, this correction <strong style="color:var(--text)">fades with age</strong>: players over 28 receive progressively less GP correction, reflecting that older players are more likely to suffer recurring or decline-related injuries. The boost portion decays by <code>e^(-0.12 × (age − 28))</code>, so a 35-year-old retains only ~43% of the correction a younger player would get.</p>
+    <p>An <strong style="color:var(--text)">age factor</strong> rewards youth and mildly penalizes age. Players below the league average age (~26.5) receive up to a 1.85× bonus scaling linearly to the youngest player. Players 35 and older receive a 3% penalty per year over 35 (floor 0.5×). Players between average and 35 are unaffected. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
+    <p>A <strong style="color:var(--accent-gold)">potential bonus</strong> (up to $25M) is added for players under 25, based on their draft position and age. Both factors use exponential decay: earlier draft picks and younger ages receive larger bonuses, with bigger gaps at the top (e.g., the difference between pick 1 and 2 is larger than between picks 59 and 60). Hover over the Age column to see the potential bonus breakdown.</p>
+    <p>The distribution uses a <strong style="color:var(--accent-gold)">soft-capped exponent</strong> — <code>score = r^3.2 / (1 + r^3.2 / 14000)</code> — instead of a plain power curve. For mid-tier players, this behaves like a normal r^3.2 distribution, creating enough separation to push ~32 players above max-contract thresholds. For elite outliers, the denominator grows, compressing the very top so no player exceeds ~$95M. The total always equals the salary pool by construction.</p>
+    <p><strong style="color:var(--accent)">Trade Value</strong> measures a player's contract-adjusted worth, starting from the 2025-26 surplus. It takes the Real Value as a percentage of the current salary cap, then projects it forward for each remaining contract year using <strong>projected future caps</strong> and a <strong>5% per year wear-and-tear discount</strong> on signed contract years — reflecting the risk of being locked into a guaranteed salary. <strong>Player Options</strong>: if projected value exceeds option salary, the player declines (<span style="color:var(--accent)">PO↗</span>). <strong>Team Options</strong>: if option salary exceeds projected value, the team declines (<span style="color:var(--surplus-neg)">TO✗</span>). <strong>Restricted Free Agents</strong> (YOS ≤ 4 at contract end with positive surplus) get 3 projected years at market salary with 8% raises, at full value with no wear-and-tear (<span style="color:var(--accent-gold)">RFA</span>). The league-wide sum of all Trade Values is normalized to $0.</p>
+    <div class="formula-block">
+      <span class="step-label">Step 1</span>&nbsp; Watermark = Σ(weight × games × corrected RAT/g) ÷ Σ(weight × games) — time-decay per season<br>
+      <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × (1 + (min(2.5, (exp/act)^0.8) − 1) × ageFade) &nbsp;|&nbsp; ageFade = e<sup>-0.12(age-28)</sup> if age &gt; 28, else 1.0<br>
+      <span class="step-label">Step 3</span>&nbsp; score(r) = r^3.2 ÷ (1 + r^3.2 / 14000) &nbsp;|&nbsp; TV<sub>WM</sub> = (score(WM) ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (score(RAT365) ÷ Σ) × Pool<br>
+      <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 92% × TV<sub>WM</sub> + 8% × TV<sub>RAT</sub><br>
+      <span class="step-label">Step 5</span>&nbsp; Defense SC/MPG adj (±1.5 WM pts) + Age factor (youth +85%, 35+ −3%/yr) → normalize to Pool<br>
+      <span class="step-label">Step 6</span>&nbsp; Potential bonus = $25M × e<sup>-0.05(pick-1)</sup> × e<sup>-0.5(age-18.82)</sup> (under 25 only)<br>
+      <span class="step-label">Step 7</span>&nbsp; Trade Value = Surplus<sub>25-26</sub> + Σ<sub>contract years</sub> ((RV ÷ Cap<sub>cur</sub>) × Cap<sub>proj</sub> × 0.95<sup>years out</sup> − Salary) + Σ<sub>RFA years</sub> (full projected − salary)
+    </div>
+  </div>
+</div>
+
+<div class="footer">Hoopsmatic — NBA Global Rating Plus — Live data via HoopsMatic API</div>
+
+<script>
+// Data proxied through Worker — no Sheet IDs or API keys in client code
+const PROXY_BASE = 'https://hoopsmatic.com';
+const RATINGS_URL = PROXY_BASE + '/api/rm-tv';
+const CONTRACT_URL = PROXY_BASE + '/api/rm-contracts';
+const DEFENSE_URL = PROXY_BASE + '/api/defense-cache'; // SC/MPG cached by defense page
+const DEFENSE_365_URL = PROXY_BASE + '/api/defense-365'; // Defensive_365 tab (rolling DEF_SCORE)
+
+// CSV parser for proxy endpoints
+function parseCSV(text) {
+  const rows = []; let row = []; let cell = ''; let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"' && text[i+1] === '"') { cell += '"'; i++; }
+      else if (c === '"') inQuotes = false;
+      else cell += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n' || (c === '\r' && text[i+1] === '\n')) {
+        row.push(cell); cell = ''; rows.push(row); row = [];
+        if (c === '\r') i++;
+      } else cell += c;
+    }
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+const EXPONENT = 3.2;
+const KNEE = 14000; // Soft-cap: score = r^EXP / (1 + r^EXP / KNEE)
+const WM_WEIGHT = 0.92;
+const RAT_WEIGHT = 0.08;
+const AGE_MAX_BONUS = 0.85;
+const OLD_THRESHOLD = 35;
+const OLD_PENALTY_PER_YEAR = 0.03;
+const OLD_FLOOR = 0.50;
+const GAMES_BETA = 0.8;
+const GAMES_MAX_MULT = 2.5;
+const GAMES_MIN_PCT = 0.25;
+const GP_AGE_THRESHOLD = 28; // Age at which GP correction starts fading
+const GP_AGE_DECAY = 0.12; // Exponential decay rate per year over threshold
+
+// Potential bonus for young players based on draft position and age
+const POTENTIAL_MAX = 25000000; // $25M maximum potential bonus
+const MIN_ROOKIE_AGE = 18 + 300/365; // 18 years 300 days (youngest realistic debut age)
+const MAX_POTENTIAL_AGE = 25; // No potential bonus after 25
+const DRAFT_DECAY = 0.05; // Exponential decay rate for draft position
+const AGE_DECAY = 0.5; // Exponential decay rate for age
+
+// NBA 2025-26 salary floor (minimums) and ceiling (max) by experience
+const SAL_CAP = 154647000;
+const MIN_SAL = {0:1272870,1:2048494,2:2296274,3:2378870,4:2461463,5:2667947,6:2874436,7:3080921,8:3287409,9:3303774};
+const MIN_SAL_10 = 3634153;
+const MAX_SAL = {0:Math.round(SAL_CAP*0.25),7:Math.round(SAL_CAP*0.30),10:Math.round(SAL_CAP*0.35)};
+const TWO_WAY_SAL = 636435;
+function getMinSal(exp) { if (exp <= 3) return TWO_WAY_SAL; return exp >= 10 ? MIN_SAL_10 : (MIN_SAL[exp] || MIN_SAL[0]); }
+function getMaxSal(exp) { if (exp >= 10) return MAX_SAL[10]; if (exp >= 7) return MAX_SAL[7]; return MAX_SAL[0]; }
+
+// Projected salary caps for Trade Value computation
+const CAP_PROJ = {
+  2026: 154647000,  // 2025-26 (current)
+  2027: 166000000,  // 2026-27
+  2028: 174300000,  // 2027-28
+  2029: 183015000,  // 2028-29
+  2030: 192166000,  // 2029-30
+  2031: 201774000,  // 2030-31
+  2032: 211863000,  // 2031-32
+  2033: 222456000,  // 2032-33
+  2034: 233579000,  // 2033-34
+  2035: 245258000,  // 2034-35
+};
+
+function parseCSV(text) {
+  const rows = []; let current = '', inQuotes = false, row = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i+1] === '"') { current += '"'; i++; }
+      else if (ch === '"') inQuotes = false;
+      else current += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { row.push(current.trim()); current = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && text[i+1] === '\n') i++;
+        row.push(current.trim());
+        if (row.length > 1 || row[0] !== '') rows.push(row);
+        row = []; current = '';
+      } else current += ch;
+    }
+  }
+  if (current || row.length > 0) { row.push(current.trim()); if (row.length > 1 || row[0] !== '') rows.push(row); }
+  return rows;
+}
+
+// Parse the Defensive_365 Sheets-API JSON into { playerName: DEF_SCORE }.
+// DEF_SCORE is the archetype-weighted composite on the fixed ~15-average scale
+// (avg≈15, elite starters mid-20s, DPOY-level low-30s).
+function parseDef365(json) {
+  const out = {};
+  const rows = (json && json.values) ? json.values : null;
+  if (!rows || rows.length < 3) return out;
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(rows.length, 6); i++) {
+    const cells = (rows[i] || []).map(c => (c || '').toString().trim().toUpperCase());
+    if (cells.includes('PLAYER') && cells.includes('DEF_SCORE')) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) return out;
+  const header = rows[headerIdx].map(h => (h || '').toString().trim().toUpperCase());
+  const nameCol = header.indexOf('PLAYER');
+  const scoreCol = header.indexOf('DEF_SCORE');
+  if (nameCol < 0 || scoreCol < 0) return out;
+  for (let r = headerIdx + 1; r < rows.length; r++) {
+    const row = rows[r] || [];
+    const name = (row[nameCol] || '').toString().trim();
+    const score = parseFloat(row[scoreCol]);
+    if (name && !isNaN(score)) out[name] = score;
+  }
+  return out;
+}
+
+function processData(rows, contractRows, defenseMapInput, def365MapInput) {
+  const dataRows = rows.slice(1);
+  const roster = [], historical = [];
+  let todayStr = null;
+  const shootingMap = {};
+  const expMap = {};
+  const usgMap = {};
+
+  // Defense SC/MPG map: either from cache (pre-computed) or from Sheet3 column
+  const defenseMap = Object.assign({}, defenseMapInput || {});
+  console.log('[Defense] Input map has', Object.keys(defenseMap).length, 'players');
+  
+  // Also scan Sheet3 headers for SC/MPG column (local override)
+  if (dataRows.length > 0) {
+    const headers = rows[0] || [];
+    const scMpgIdx = headers.findIndex(h => {
+      const u = (h||'').trim().toUpperCase();
+      return (u.includes('SC') && u.includes('MPG')) || u === 'SC_MPG' || u === 'DEF_SCMPG';
+    });
+    if (scMpgIdx >= 0) {
+      const nameIdx = scMpgIdx > 20 ? 22 : 1;
+      for (const row of dataRows) {
+        const name = (row[nameIdx] || '').trim();
+        const val = parseFloat(row[scMpgIdx]);
+        if (name && !isNaN(val) && val > 0) defenseMap[name] = val;
+      }
+      console.log('[Defense] Sheet3 override: ' + Object.keys(defenseMap).length + ' players from col ' + scMpgIdx);
+    }
+  }
+  
+  if (Object.keys(defenseMap).length > 0) {
+    const sample = Object.entries(defenseMap).slice(0,3);
+    console.log('[Defense] Active: ' + Object.keys(defenseMap).length + ' players. Sample: ' + sample.map(([n,v]) => n + '=' + v.toFixed(4)).join(', '));
+  } else {
+    console.log('[Defense] No defense data — visit hoopsmatic.com/defense first to populate the cache');
+  }
+
+  for (const row of dataRows) {
+    while (row.length < 21) row.push('');
+    // Grab today's date from col S (index 18)
+    if (row[18] && !todayStr) todayStr = row[18];
+    if (row[0] && row[1]) {
+      const draftPick = parseInt(row[20]) || null; // Column U = draft position
+      roster.push({ team: row[0], player: row[1], rat365: parseFloat(row[2]) || 0, salary: parseInt(row[3].replace(/[$,]/g,'')) || 0, birthday: row[4] || '', draftPick: draftPick });
+      // EXP column (index 19)
+      if (row[19]) { const ev = parseInt(row[19]); if (!isNaN(ev)) expMap[row[1].trim()] = ev; }
+      if (row[22] && row[23]) { const uv = parseFloat(row[23]); if (!isNaN(uv) && uv > 0) usgMap[row[22].trim()] = uv; }
+    }
+    if (row[6] && row[7]) {
+      const g = parseInt(row[9]) || 0;
+      if (g > 0) historical.push({ year: row[6], player: row[7], totalRat: parseFloat(row[8].replace(/,/g,'')) || 0, games: g });
+    }
+    // Shooting penalty (col 12=player, col 17=shooting, 2025-26 block)
+    if (row[12] && row[17]) {
+      const sv = parseFloat(row[17]);
+      if (!isNaN(sv) && sv > 0) shootingMap[row[12].trim()] = sv;
+    }
+  }
+
+  const playerHist = {};
+  for (const h of historical) { const k = h.player.toLowerCase(); if (!playerHist[k]) playerHist[k] = []; playerHist[k].push(h); }
+
+  const totalSalaryPool = roster.reduce((s,p) => s + p.salary, 0);
+
+  // Parse ages early so GP correction can use them
+  function parseDate(s) {
+    if (!s) return null;
+    const parts = s.split('/');
+    if (parts.length === 3) return new Date(+parts[2], +parts[0]-1, +parts[1]);
+    return null;
+  }
+  const today = parseDate(todayStr) || new Date();
+  const ages = [];
+  for (const p of roster) {
+    const bd = parseDate(p.birthday);
+    if (bd) {
+      p.age = (today - bd) / (365.25 * 24 * 60 * 60 * 1000);
+      ages.push(p.age);
+    } else {
+      p.age = null;
+    }
+  }
+  const avgAge = ages.length > 0 ? ages.reduce((a,b) => a+b, 0) / ages.length : 26;
+  const maxDevYoung = avgAge - Math.min(...ages);
+
+  // GP correction helper — boosts players who missed time, never penalizes healthy players
+  function gpCorr(rawPerGame, expected, actual, playerAge) {
+    const pct = actual / expected;
+    if (pct < GAMES_MIN_PCT) return rawPerGame;
+    const rawMult = Math.max(1.0, Math.min(GAMES_MAX_MULT, Math.pow(expected / actual, GAMES_BETA)));
+    if (playerAge !== null && playerAge > GP_AGE_THRESHOLD) {
+      const fade = Math.exp(-GP_AGE_DECAY * (playerAge - GP_AGE_THRESHOLD));
+      const boost = (rawMult - 1.0) * fade;
+      return rawPerGame * (1.0 + boost);
+    }
+    return rawPerGame * rawMult;
+  }
+
+  const SEASON_WEIGHT = {'2025-26':1.0,'2024-25':0.6,'2023-24':0.36,'2022-23':0.216,'2021-22':0.1296};
+  const CUR_YEAR = '2025-26';
+  const EXPECTED = {'2021-22':82,'2022-23':82,'2023-24':82,'2024-25':82,'2025-26':82};
+
+  for (const p of roster) {
+    const hist = playerHist[p.player.toLowerCase()] || [];
+    let num = 0, den = 0;
+    let priorNum = 0, priorDen = 0; // Historical watermark excluding current season
+    for (const h of hist) {
+      const w = SEASON_WEIGHT[h.year] || 0;
+      if (w <= 0 || h.games <= 0) continue;
+      let perGame = h.totalRat / h.games;
+      // Per-season games correction with age fade
+      const exp = EXPECTED[h.year] || 82;
+      perGame = gpCorr(perGame, exp, h.games, p.age);
+      num += perGame * w * h.games;
+      den += w * h.games;
+      if (h.year !== CUR_YEAR) {
+        priorNum += perGame * w * h.games;
+        priorDen += w * h.games;
+      }
+    }
+    const fullWM = den > 0 ? num / den : 0;
+    const priorWM = priorDen > 0 ? priorNum / priorDen : 0;
+    // Injury protection: only kicks in for drops > 5% (filters out natural variance)
+    if (priorDen > 0 && fullWM < priorWM * 0.95) {
+      const dropPct = 1 - (fullWM / priorWM); // e.g. 0.10 = 10% drop, 0.50 = 50% drop
+      const boost = dropPct > 0.20 ? 1.0 + dropPct * 0.12 : 1.0; // graduated boost for severe drops only
+      p.watermark = priorWM * boost;
+    } else {
+      p.watermark = fullWM;
+    }
+
+    const cur = hist.filter(h => h.year === CUR_YEAR);
+    p.curGames = cur.reduce((s,h) => s+h.games, 0);
+    p.expGames = EXPECTED[CUR_YEAR];
+    if (p.curGames > 0 && (p.curGames/p.expGames) >= GAMES_MIN_PCT) {
+      const rawMult = Math.max(1.0, Math.min(GAMES_MAX_MULT, Math.pow(p.expGames/p.curGames, GAMES_BETA)));
+      if (p.age !== null && p.age > GP_AGE_THRESHOLD) {
+        const fade = Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD));
+        p.gamesCorr = 1.0 + (rawMult - 1.0) * fade;
+      } else {
+        p.gamesCorr = rawMult;
+      }
+    } else { p.gamesCorr = 1.0; }
+
+    // Season weights for tooltip
+    const yrs = [...new Set(hist.map(h => h.year))].sort();
+    p.seasonInfo = yrs.map(yr => {
+      const yh = hist.filter(h => h.year === yr);
+      const g = yh.reduce((s,h) => s+h.games, 0);
+      const r = yh.reduce((s,h) => s+h.totalRat, 0);
+      const w = SEASON_WEIGHT[yr] || 0;
+      return { year: yr, avg: g > 0 ? r/g : 0, games: g, weight: w };
+    }).filter(s => s.weight > 0);
+
+    // Games-corrected RAT 365 (with age fade)
+    if (p.curGames > 0) {
+      const pct = p.curGames / EXPECTED[CUR_YEAR];
+      if (pct >= GAMES_MIN_PCT) {
+        const rawMult = Math.max(1.0, Math.min(GAMES_MAX_MULT, Math.pow(EXPECTED[CUR_YEAR]/p.curGames, GAMES_BETA)));
+        if (p.age !== null && p.age > GP_AGE_THRESHOLD) {
+          const fade = Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD));
+          p.rat365adj = p.rat365 * (1.0 + (rawMult - 1.0) * fade);
+        } else {
+          p.rat365adj = p.rat365 * rawMult;
+        }
+      } else { p.rat365adj = p.rat365; }
+    } else {
+      const prev = hist.filter(h => h.year === '2024-25');
+      const pg = prev.reduce((s,h) => s+h.games, 0) || 82;
+      const pct = pg / 82;
+      if (pct >= GAMES_MIN_PCT) {
+        const rawMult = Math.max(1.0, Math.min(GAMES_MAX_MULT, Math.pow(82/pg, GAMES_BETA)));
+        if (p.age !== null && p.age > GP_AGE_THRESHOLD) {
+          const fade = Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD));
+          p.rat365adj = p.rat365 * (1.0 + (rawMult - 1.0) * fade);
+        } else {
+          p.rat365adj = p.rat365 * rawMult;
+        }
+      } else { p.rat365adj = p.rat365; }
+    }
+  }
+
+  // Age multiplier: youth bonus below avg, mild penalty above 35
+  for (const p of roster) {
+    if (p.age !== null && p.age < avgAge) {
+      p.ageMult = 1.0 + AGE_MAX_BONUS * (avgAge - p.age) / maxDevYoung;
+    } else if (p.age !== null && p.age >= OLD_THRESHOLD) {
+      p.ageMult = Math.max(OLD_FLOOR, 1.0 - OLD_PENALTY_PER_YEAR * (p.age - OLD_THRESHOLD));
+    } else {
+      p.ageMult = 1.0;
+    }
+  }
+
+  // Injury protection for rat365adj: if current-season rating is far below
+  // historical watermark, use watermark as floor (player was injured, not declining)
+  for (const p of roster) {
+    if (p.rat365adj < p.watermark * 0.5) {
+      p.rat365adj = p.watermark;
+    }
+  }
+
+  // Defensive ranking (rolling last 365 days): the headline signal for this
+  // page. Each player's Defensive_365 DEF_SCORE (fixed ~15-average scale) is
+  // z-scored vs the league and added as up to ±DEF365_MAX_BONUS watermark
+  // points, so it compounds through the 3.2 exponent like production does.
+  // Tune DEF365_MAX_BONUS: 2 = light · 4 = clear impact (default) · 6 = defense-forward.
+  const def365Map = def365MapInput || {};
+  const DEF365_MAX_BONUS = 4.0;
+  const d365Vals = Object.values(def365Map).filter(v => typeof v === 'number' && !isNaN(v));
+  if (d365Vals.length > 0) {
+    const d365Avg = d365Vals.reduce((s,v) => s+v, 0) / d365Vals.length;
+    const d365Sd = Math.sqrt(d365Vals.reduce((s,v) => s + (v-d365Avg)*(v-d365Avg), 0) / d365Vals.length) || 1;
+    console.log('[Defense365] avg=' + d365Avg.toFixed(2) + ' sd=' + d365Sd.toFixed(2) + ' n=' + d365Vals.length);
+    for (const p of roster) {
+      const ds = def365Map[p.player];
+      let adj = 0;
+      if (typeof ds === 'number' && !isNaN(ds)) {
+        const z = (ds - d365Avg) / d365Sd;           // deviation from league average
+        adj = Math.max(-DEF365_MAX_BONUS, Math.min(DEF365_MAX_BONUS, (z / 2) * DEF365_MAX_BONUS));
+      }
+      p.defenseAdj = adj;
+      p.def365Score = (typeof ds === 'number' && !isNaN(ds)) ? ds : null;
+      p.watermark += adj;
+      p.rat365adj += adj;
+    }
+  } else {
+    // No 365 data — leave ratings unadjusted (page still renders).
+    for (const p of roster) { p.defenseAdj = 0; p.def365Score = null; }
+    console.log('[Defense365] No data — Global Rating Plus = base rating. Run pipeline with --include-365 and visit /defense/365 to populate.');
+  }
+
+  // Top-20 RAT 365 production bonus: elite current-season performers get a WM nudge
+  // Mirrors All-NBA caliber recognition — graduated by rank
+  const TOP20_TIERS = [{from:1,to:5,bonus:1.5},{from:6,to:10,bonus:1.2},{from:11,to:15,bonus:1.0},{from:16,to:20,bonus:0.8}];
+  const rat365Sorted = [...roster].sort((a,b) => (b.rat365||0) - (a.rat365||0));
+  for (let i = 0; i < Math.min(20, rat365Sorted.length); i++) {
+    const p = rat365Sorted[i];
+    const tier = TOP20_TIERS.find(t => (i+1) >= t.from && (i+1) <= t.to);
+    if (tier) {
+      p.top20Bonus = tier.bonus;
+      p.watermark += tier.bonus;
+      p.rat365adj += tier.bonus;
+    }
+  }
+  console.log('[Top20] Bonuses applied:', rat365Sorted.slice(0,20).map(p => p.player + ' +' + (p.top20Bonus||0)).join(', '));
+
+  // Offensive creation index: USG% × RAT365 rewards players who carry offensive load
+  // High-usage + high-production = harder to replace = premium value
+  const CREATION_TIERS = [{from:1,to:5,bonus:1.2},{from:6,to:10,bonus:0.9},{from:11,to:20,bonus:0.6},{from:21,to:30,bonus:0.3}];
+  const creationSorted = [...roster].filter(p => (usgMap[p.player]||0) > 0 && p.rat365 >= 8)
+    .map(p => ({...p, _ci: (usgMap[p.player]||0) * p.rat365}))
+    .sort((a,b) => b._ci - a._ci);
+  for (let i = 0; i < Math.min(30, creationSorted.length); i++) {
+    const cp = creationSorted[i];
+    const tier = CREATION_TIERS.find(t => (i+1) >= t.from && (i+1) <= t.to);
+    if (tier) {
+      const p = roster.find(r => r.player === cp.player);
+      if (p) {
+        p.creationBonus = tier.bonus;
+        p.watermark += tier.bonus;
+        p.rat365adj += tier.bonus;
+      }
+    }
+  }
+  console.log('[Creation] Top 10:', creationSorted.slice(0,10).map(p => p.player + ' ci=' + p._ci.toFixed(1)).join(', '));
+
+  // Real value: 92/8 blend × age multiplier × shooting penalty, then renormalize to pool
+  // Soft-capped exponent: compresses elite outliers while preserving mid-tier separation
+  function softScore(r) { const s = Math.pow(Math.max(r, 0), EXPONENT); return s / (1.0 + s / KNEE); }
+  const totalAdjWM = roster.reduce((s,p) => s + softScore(p.watermark), 0);
+  const totalAdjRAT = roster.reduce((s,p) => s + softScore(p.rat365adj), 0);
+  for (const p of roster) {
+    const tvWM = (softScore(p.watermark) / totalAdjWM) * totalSalaryPool;
+    const tvRAT = (softScore(p.rat365adj) / totalAdjRAT) * totalSalaryPool;
+    p.tvPreAge = WM_WEIGHT * tvWM + RAT_WEIGHT * tvRAT;
+    // Shooting penalty: decrease by (value × 100)%
+    p.shootingPenalty = (shootingMap[p.player] || 0) * 2;
+    p.shootingMult = 1 - p.shootingPenalty;
+    p.tvWithAge = p.tvPreAge * p.ageMult * p.shootingMult;
+  }
+  const totalWithAge = roster.reduce((s,p) => s + p.tvWithAge, 0);
+  
+  // Calculate potential bonus for young players
+  function calcPotentialBonus(age, draftPick) {
+    // Only for players under 25 with valid draft position (1-60)
+    if (age === null || age >= MAX_POTENTIAL_AGE || !draftPick || draftPick < 1 || draftPick > 60) {
+      return 0;
+    }
+    // Draft position factor: exponential decay (pick 1 = 1.0, pick 60 ≈ 0.05)
+    const draftFactor = Math.exp(-DRAFT_DECAY * (draftPick - 1));
+    // Age factor: exponential decay (18.82 years = 1.0, 25 years ≈ 0.04)
+    const ageFromMin = Math.max(0, age - MIN_ROOKIE_AGE);
+    const ageFactor = Math.exp(-AGE_DECAY * ageFromMin);
+    return Math.round(POTENTIAL_MAX * draftFactor * ageFactor);
+  }
+  
+  // Compute final real values: base TV + potential bonus
+  for (const p of roster) {
+    const baseTV = Math.round((p.tvWithAge / totalWithAge) * totalSalaryPool);
+    p.potentialBonus = calcPotentialBonus(p.age, p.draftPick);
+    p.uncappedTV = baseTV + p.potentialBonus;
+  }
+  // Renormalize so total TV = salary pool (potential bonuses inflate the total)
+  const rawTotal = roster.reduce((s,p) => s + p.uncappedTV, 0);
+  const normFactor = totalSalaryPool / rawTotal;
+  for (const p of roster) {
+    p.uncappedTV = Math.round(p.uncappedTV * normFactor);
+    p.potentialBonus = Math.round(p.potentialBonus * normFactor);
+  }
+  for (const p of roster) {
+    p.exp = (expMap[p.player] !== undefined) ? expMap[p.player] : null;
+    // Estimate experience from age if EXP column is missing
+    const effExp = p.exp !== null ? p.exp : (p.age !== null ? Math.max(0, Math.round(p.age - 19)) : 0);
+    p.salCeil = getMaxSal(effExp);
+    // Floor: two-way for ≤3 yrs if under two-way; vet min if between two-way and vet min
+    const vetMin = effExp >= 10 ? MIN_SAL_10 : (MIN_SAL[effExp] || MIN_SAL[0]);
+    p.salFloor = effExp <= 3 ? TWO_WAY_SAL : vetMin;
+    p.capped = false;
+    p.floored = false;
+    p.twoWay = false;
+    if (p.uncappedTV > p.salCeil) { p.capped = true; }
+    else if (effExp <= 3 && p.uncappedTV < TWO_WAY_SAL) { p.floored = true; p.twoWay = true; }
+    else if (p.uncappedTV < vetMin && (effExp > 3 || p.uncappedTV >= TWO_WAY_SAL)) { p.floored = true; }
+    // Real value = uncapped real value; category = label
+    p.tradeValue = p.uncappedTV;
+    if (p.capped) { p.category = 'Max Player'; }
+    else if (p.twoWay) { p.category = 'Two-Way Player'; }
+    else if (p.floored) { p.category = 'Minimum Contract Player'; }
+    else { p.category = fmtFullTV$(p.uncappedTV); }
+    p.surplus = p.tradeValue - p.salary;
+  }
+
+  // ======== TRADE VALUE (contract-based surplus) ========
+  // Parse contracts sheet: cols [0]=PLAYER, [7]=2026 sal, [9]=ST25-26, [10]=2027 sal, [12]=ST26-27, etc.
+  // Also: [26]=OPTION, [27]=END, [38]=YOS
+  const contractMap = {};
+  if (contractRows && contractRows.length > 1) {
+    const parseSal = v => { const s = (v||'').replace(/[$,]/g,'').trim(); const n = parseInt(s); return isNaN(n) ? 0 : n; };
+    for (let i = 1; i < contractRows.length; i++) {
+      const r = contractRows[i];
+      if (!r[0] || r[0].length < 2) continue;
+      const name = r[0].trim();
+      const yrs = [];
+      const colMap = [{s:7,t:9,y:2026},{s:10,t:12,y:2027},{s:13,t:15,y:2028},{s:16,t:18,y:2029},{s:19,t:21,y:2030},{s:22,t:24,y:2031}];
+      for (const cm of colMap) {
+        const sal = parseSal(r[cm.s]);
+        const st = ((r[cm.t]||'').trim().toUpperCase());
+        if (sal > 0) yrs.push({ year: cm.y, salary: sal, status: st });
+      }
+      const end = parseInt(r[27]) || 0;
+      const yos = parseInt(r[38]);
+      const option = (r[26]||'').trim().toUpperCase();
+      contractMap[name] = { yrs, end, yos: isNaN(yos) ? 99 : yos, option };
+    }
+  }
+
+  // Max salary % by YOS (of salary cap)
+  const maxPctByYOS = yos => yos >= 10 ? 0.35 : yos >= 7 ? 0.30 : 0.25;
+
+  // Wear-and-tear discount: 5% per year for signed contract years (injury/decline risk)
+  // Does NOT apply to current season or RFA projected years (no commitment yet)
+  const WEAR_TEAR = 0.05;
+
+  // Compute Trade Value for each player
+  const curCap = CAP_PROJ[2026];
+  for (const p of roster) {
+    const c = contractMap[p.player];
+    p.contractYears = [];
+    p.contractEnd = 0;
+    p.contractTV = 0;
+    p.rfaYears = [];
+    p.poDeclined = false;
+    p.toDeclined = false;
+
+    if (!c || p.uncappedTV <= 0) continue;
+
+    p.contractEnd = c.end;
+    const capPct = p.uncappedTV / curCap; // Real Value as % of current cap
+
+    // Step 1: 2025-26 surplus (current season — no discount)
+    const surplus26 = p.uncappedTV - p.salary;
+    let tvSum = surplus26;
+    p.contractYears.push({ year: 2026, salary: p.salary, projVal: p.uncappedTV, surplus: surplus26, status: 'CURRENT', wt: 1.0 });
+
+    // Step 2: Future contract years (2027+) with PO/TO detection and wear-and-tear
+    let effectiveEnd = c.end;
+    for (const yr of c.yrs) {
+      if (yr.year < 2027) continue;
+      const projCap = CAP_PROJ[yr.year];
+      if (!projCap) continue;
+      const yearsOut = yr.year - 2026;
+      const wtFactor = Math.pow(1 - WEAR_TEAR, yearsOut);
+      const projVal = Math.round(capPct * projCap * wtFactor);
+
+      // Player Option: if projected value > option salary, player opts out
+      if (yr.status.includes('PLAYER OPT') && projVal > yr.salary) {
+        p.poDeclined = true;
+        effectiveEnd = yr.year - 1;
+        break;
+      }
+
+      // Team Option: if option salary > projected value, team declines
+      if (yr.status.includes('TEAM OPT') && yr.salary > projVal) {
+        p.toDeclined = true;
+        effectiveEnd = yr.year - 1;
+        break;
+      }
+
+      const surp = projVal - yr.salary;
+      tvSum += surp;
+      p.contractYears.push({ year: yr.year, salary: yr.salary, projVal, surplus: Math.round(surp), status: yr.status, wt: Math.round(wtFactor * 1000) / 1000 });
+    }
+
+    // Step 3: RFA projection (3 years) — NO wear-and-tear (no contract signed yet = no risk)
+    const yosAtEnd = c.yos + (effectiveEnd - 2025);
+    const isRFA = yosAtEnd <= 4 && surplus26 > 0;
+    if (isRFA) {
+      const rfaStartYear = effectiveEnd + 1;
+      const yosAtSigning = yosAtEnd + 1;
+      const maxPct = maxPctByYOS(yosAtSigning);
+      const startCap = CAP_PROJ[rfaStartYear];
+      if (startCap) {
+        let newSal = Math.round(Math.min(capPct, maxPct) * startCap);
+        for (let y = 0; y < 3; y++) {
+          const yr = rfaStartYear + y;
+          const projCap = CAP_PROJ[yr];
+          if (!projCap) break;
+          const projVal = Math.round(capPct * projCap);
+          const surp = projVal - newSal;
+          tvSum += surp;
+          p.rfaYears.push({ year: yr, salary: newSal, projVal, surplus: Math.round(surp), status: 'RFA PROJ', wt: null });
+          newSal = Math.round(newSal * 1.08);
+        }
+      }
+    }
+
+    p.contractTV = Math.round(tvSum);
+  }
+
+  // Normalize Trade Values so the league-wide sum = $0
+  // Distribute the offset proportionally by |TV| so big values absorb more
+  const rawTVTotal = roster.reduce((s, p) => s + p.contractTV, 0);
+  if (Math.abs(rawTVTotal) > 0) {
+    const totalAbsTV = roster.reduce((s, p) => s + Math.abs(p.contractTV), 0);
+    if (totalAbsTV > 0) {
+      for (const p of roster) {
+        p.contractTV = Math.round(p.contractTV - rawTVTotal * (Math.abs(p.contractTV) / totalAbsTV));
+      }
+      // Fix rounding residual on largest absolute TV player
+      const finalSum = roster.reduce((s, p) => s + p.contractTV, 0);
+      if (finalSum !== 0) {
+        const maxP = roster.reduce((a, b) => Math.abs(a.contractTV) > Math.abs(b.contractTV) ? a : b);
+        maxP.contractTV -= finalSum;
+      }
+    }
+  }
+  // Pool = sum of capped real values
+  const cappedPool = roster.reduce((s,p) => s + p.tradeValue, 0);
+  // Rank by uncapped (real) value
+  roster.sort((a,b) => b.uncappedTV - a.uncappedTV);
+  roster.forEach((p,i) => p.rank = i+1);
+
+  return { players: roster, totalSalaryPool: cappedPool, exponent: EXPONENT, avgAge };
+}
+
+let appData = null;
+let snapshot = null;
+
+function takeSnapshot() {
+  if (!appData) return;
+  snapshot = {};
+  for (const p of appData.players) {
+    snapshot[p.player] = { rank: p.rank, tv: p.uncappedTV, surplus: p.surplus, watermark: p.watermark, rat365: p.rat365, contractTV: p.contractTV };
+  }
+  document.getElementById('snapBanner').style.display = 'block';
+  document.getElementById('snapshotBtn').classList.add('active');
+  document.getElementById('snapshotBtn').textContent = '📸 Locked';
+  document.getElementById('clearSnapBtn').style.display = '';
+  update();
+}
+
+function clearSnapshot() {
+  snapshot = null;
+  document.getElementById('snapBanner').style.display = 'none';
+  document.getElementById('snapshotBtn').classList.remove('active');
+  document.getElementById('snapshotBtn').textContent = '📸 Snapshot';
+  document.getElementById('clearSnapBtn').style.display = 'none';
+  update();
+}
+
+async function refreshData() {
+  const btn = document.getElementById('refreshBtn');
+  btn.textContent = '⏳ Loading...';
+  btn.disabled = true;
+  try {
+    const [res, cRes, dRes, d365Res] = await Promise.all([
+      fetch(RATINGS_URL),
+      fetch(CONTRACT_URL),
+      fetch(DEFENSE_URL).catch(e => { console.warn('[Defense] Refresh fetch failed:', e.message); return null; }),
+      fetch(DEFENSE_365_URL).catch(e => { console.warn('[Defense365] Refresh fetch failed:', e.message); return null; })
+    ]);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const ratingsRows = parseCSV(await res.text());
+    const contractRows = cRes.ok ? parseCSV(await cRes.text()) : [];
+    let defenseMap = {};
+    if (dRes && dRes.ok) { try { defenseMap = await dRes.json(); } catch(e) {} }
+    let def365Map = {};
+    if (d365Res && d365Res.ok) { try { def365Map = parseDef365(await d365Res.json()); } catch(e) {} }
+    appData = processData(ratingsRows, contractRows, defenseMap, def365Map);
+    buildStats(appData);
+    update();
+    btn.textContent = '✅ Updated';
+    setTimeout(() => { btn.textContent = '🔄 Refresh'; }, 1500);
+  } catch(err) {
+    btn.textContent = '❌ Error';
+    setTimeout(() => { btn.textContent = '🔄 Refresh'; }, 2000);
+  }
+  btn.disabled = false;
+}
+
+function deltaHTML(cur, prev, invert) {
+  if (prev === undefined || prev === null) return '';
+  const d = cur - prev;
+  if (Math.abs(d) < 0.005) return '';
+  const sign = invert ? -d : d;
+  const cls = sign > 0 ? 'delta-up' : 'delta-down';
+  const arrow = sign > 0 ? '▲' : '▼';
+  return `<span class="delta ${cls}">${arrow}${Math.abs(d) >= 1e5 ? fmt$(Math.abs(d)) : Math.abs(d).toLocaleString(undefined,{maximumFractionDigits:2})}</span>`;
+}
+
+function rankDelta(cur, prev) {
+  if (prev === undefined || prev === null) return '';
+  const d = prev - cur;
+  if (d === 0) return '';
+  const cls = d > 0 ? 'delta-up' : 'delta-down';
+  const arrow = d > 0 ? '▲' : '▼';
+  return `<span class="delta ${cls}">${arrow}${Math.abs(d)}</span>`;
+}
+
+function fmt$(n) { const a=Math.abs(n); if(a>=1e6)return(n<0?'-':'')+'$'+(a/1e6).toFixed(1)+'M'; if(a>=1e3)return(n<0?'-':'')+'$'+(a/1e3).toFixed(0)+'K'; return '$'+n.toLocaleString(); }
+function fmtFull$(n) { return (n<0?'-$':'$')+Math.abs(n).toLocaleString(); }
+function fmtTV$(n) { return (!n || n < 650000) ? '<$650K' : fmt$(n); }
+function fmtFullTV$(n) { return (!n || n < 650000) ? '<$650K' : fmtFull$(n); }
+function ratCls(r) { return r>=18?'rat-elite':r>=12?'rat-star':r>=6?'rat-solid':r>=2?'rat-avg':'rat-low'; }
+function rankCls(r) { return r<=5?'rank-top5':r<=20?'rank-top20':r<=50?'rank-top50':''; }
+function surpCls(s) { return s>5e5?'surplus-pos':s<-5e5?'surplus-neg':'surplus-neutral'; }
+
+function buildStats(d) {
+  const avgWM = d.players.reduce((s,p) => s+p.watermark, 0) / d.players.length;
+  document.getElementById('statsBar').innerHTML = [
+    {l:'Salary Pool',v:'$'+(d.totalSalaryPool/1e9).toFixed(2),u:'B'},
+    {l:'Players Ranked',v:d.players.length,u:''},
+    {l:'Avg Age',v:d.avgAge.toFixed(1),u:' yrs'},
+    {l:'Formula',v:'92/8',u:' + age + GP fade + soft cap'}
+  ].map(s=>`<div class="stat-card"><div class="label">${s.l}</div><div class="value">${s.v}<span class="unit">${s.u}</span></div></div>`).join('');
+}
+
+function buildTeams(d) {
+  const sel = document.getElementById('teamFilter');
+  sel.innerHTML = '<option value="">All Teams</option>';
+  [...new Set(d.players.map(p=>p.team))].sort().forEach(t => { const o=document.createElement('option'); o.value=t; o.textContent=t; sel.appendChild(o); });
+}
+
+function renderTable(players) {
+  const maxS = Math.max(...appData.players.map(p=>Math.abs(p.surplus)));
+  document.getElementById('tableBody').innerHTML = players.map((p,i) => {
+    const pct = Math.min(Math.abs(p.surplus)/maxS*50, 50);
+    const bc = p.surplus>=0?'positive':'negative';
+    const s = snapshot ? snapshot[p.player] : null;
+    return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
+      <td class="col-rank ${rankCls(p.rank)}">${p.rank}${s ? rankDelta(p.rank, s.rank) : ''}</td>
+      <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
+      <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.defenseAdj !== 0 ? `<br><span class="tt-label">Defense (365):</span> <span class="tt-val" style="color:${p.defenseAdj>0?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.defenseAdj>0?'+':''}${p.defenseAdj.toFixed(2)} WM pts</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
+      <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}${s ? deltaHTML(p.rat365, s.rat365, false) : ''}</td>
+      <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}${s ? deltaHTML(p.watermark, s.watermark, false) : ''}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
+      <td class="col-num">${fmtFull$(p.salary)}</td>
+      <td class="col-num col-rat" style="color:${p.def365Score!==null ? (p.def365Score>=24?'var(--rat-elite,#10b981)':p.def365Score>=18?'var(--surplus-pos)':p.def365Score>=12?'var(--text2)':'var(--text-muted)') : 'var(--text-muted)'}">${p.def365Score!==null ? p.def365Score.toFixed(1) : '—'}</td>
+      <td class="col-num col-real-value">${fmtFullTV$(p.tradeValue)}${s ? deltaHTML(p.uncappedTV, s.tv, false) : ''}</td>
+      <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text2)'}">${p.category}</td>
+      <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span>${s ? deltaHTML(p.surplus, s.surplus, false) : ''}</div></td>
+      <td class="col-num wm-detail ${p.contractTV>0?'surplus-pos':p.contractTV<0?'surplus-neg':''}"><span style="font-weight:700">${p.contractTV!==0 ? ((p.contractTV>0?'+':'')+fmt$(p.contractTV)) : '—'}</span>${(p.contractYears.length || p.rfaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
+      <td class="col-num" style="font-size:0.75rem;color:var(--text-muted)">${p.contractEnd >= 2027 ? p.contractEnd : 'EXP'}${p.rfaYears.length ? ' <span style="color:var(--accent-gold)">RFA</span>' : ''}${p.poDeclined ? ' <span style="color:var(--accent)">PO↗</span>' : ''}${p.toDeclined ? ' <span style="color:var(--surplus-neg)">TO✗</span>' : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function update() {
+  if (!appData) return;
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const team = document.getElementById('teamFilter').value;
+  const [sortKey, sortDir] = document.getElementById('sortSelect').value.split('-');
+  let f = appData.players.filter(p => {
+    if (team && p.team !== team) return false;
+    if (search && !p.player.toLowerCase().includes(search) && !p.team.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  const dir = sortDir==='desc'?-1:1;
+  f.sort((a,b) => {
+    const av = a[sortKey], bv = b[sortKey];
+    if (av === null && bv === null) return 0;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    return (av - bv) * dir;
+  });
+  renderTable(f);
+}
+
+async function init() {
+  try {
+    const [res, cRes, dRes, d365Res] = await Promise.all([
+      fetch(RATINGS_URL),
+      fetch(CONTRACT_URL),
+      fetch(DEFENSE_URL).catch(e => { console.warn('[Defense] Fetch failed:', e.message); return null; }),
+      fetch(DEFENSE_365_URL).catch(e => { console.warn('[Defense365] Fetch failed:', e.message); return null; })
+    ]);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const ratingsRows = parseCSV(await res.text());
+    const contractRows = cRes.ok ? parseCSV(await cRes.text()) : [];
+    console.log('[Defense] Fetch result:', dRes ? `status=${dRes.status}, ok=${dRes.ok}` : 'null (fetch failed)');
+    let defenseMap = {};
+    if (dRes && dRes.ok) {
+      try { defenseMap = await dRes.json(); console.log('[Defense] Cache has', Object.keys(defenseMap).length, 'players'); }
+      catch(e) { console.warn('[Defense] Parse error:', e.message); }
+    }
+    let def365Map = {};
+    if (d365Res && d365Res.ok) {
+      try { def365Map = parseDef365(await d365Res.json()); console.log('[Defense365] Map has', Object.keys(def365Map).length, 'players'); }
+      catch(e) { console.warn('[Defense365] Parse error:', e.message); }
+    }
+    appData = processData(ratingsRows, contractRows, defenseMap, def365Map);
+
+    document.getElementById('loadingArea').style.display = 'none';
+    document.getElementById('tableContainer').style.display = 'block';
+    document.getElementById('searchInput').disabled = false;
+    document.getElementById('teamFilter').disabled = false;
+    document.getElementById('sortSelect').disabled = false;
+
+    buildStats(appData);
+    buildTeams(appData);
+    update();
+
+    document.getElementById('searchInput').addEventListener('input', update);
+    document.getElementById('teamFilter').addEventListener('change', update);
+    document.getElementById('sortSelect').addEventListener('change', update);
+    document.getElementById('snapshotBtn').disabled = false;
+    document.getElementById('refreshBtn').disabled = false;
+    document.getElementById('snapshotBtn').addEventListener('click', takeSnapshot);
+    document.getElementById('refreshBtn').addEventListener('click', refreshData);
+    document.getElementById('clearSnapBtn').addEventListener('click', clearSnapshot);
+  } catch(err) {
+    document.getElementById('loadingArea').innerHTML =
+      `<div class="error-msg"><p>⚠️ Failed to fetch data: ${err.message}</p><p style="color:var(--text-muted);margin-top:0.5rem;font-size:0.85rem;">Please try again later or contact support</p></div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>
