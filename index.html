@@ -132,7 +132,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; } tbody td { position:relative; 
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag" id="verTag">v4.10</span>
+      <span class="tag" id="verTag">v4.11</span>
     </div>
     <p class="header-subtitle">Two views: <strong>Real Value</strong> (performance in a vacuum — all players) and <strong>Trade Value</strong> (contract-adjusted surplus — tradeable players only, expiring deals excluded)</p>
   </div>
@@ -159,10 +159,10 @@ tbody tr { animation:fadeInRow 0.25s ease both; } tbody td { position:relative; 
     <select id="sortSelect" disabled>
       <option value="uncappedTV-desc">Real Value ↓</option>
       <option value="uncappedTV-asc">Real Value ↑</option>
-      <option value="contractTV-desc">Trade Value ↓</option>
-      <option value="contractTV-asc">Trade Value ↑</option>
-      <option value="tvPerYear-desc">TV / Yr ↓</option>
-      <option value="tvPerYear-asc">TV / Yr ↑</option>
+      <option value="tvPerYear-desc">TV / Yr ↓ (best annual value)</option>
+      <option value="tvPerYear-asc">TV / Yr ↑ (worst annual value)</option>
+      <option value="contractTV-desc">Trade Value (total) ↓</option>
+      <option value="contractTV-asc">Trade Value (total) ↑</option>
       <option value="surplus-desc">Surplus ↓</option>
       <option value="surplus-asc">Surplus ↑</option>
       <option value="watermark-desc">Watermark ↓</option>
@@ -243,12 +243,12 @@ tbody tr { animation:fadeInRow 0.25s ease both; } tbody td { position:relative; 
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings <span id="verFoot">v4.10</span> — Live data via HoopsMatic API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings <span id="verFoot">v4.11</span> — Live data via HoopsMatic API</div>
 
 <script>
 // Data proxied through Worker — no Sheet IDs or API keys in client code
-const APP_VERSION = 'v4.10';
-console.log('[Real Value Rankings] build ' + APP_VERSION + ' — 2026-27 salary display + mild age factor on Trade Value');
+const APP_VERSION = 'v4.11';
+console.log('[Real Value Rankings] build ' + APP_VERSION + ' — raised RV ceiling (KNEE 24k) + Trade Value ranks by TV/Yr');
 const PROXY_BASE = 'https://hoopsmatic.com';
 const RATINGS_URL = PROXY_BASE + '/api/rm-tv';
 const CONTRACT_URL = PROXY_BASE + '/api/rm-contracts';
@@ -276,7 +276,7 @@ function parseCSV(text) {
   return rows;
 }
 const EXPONENT = 3.2;
-const KNEE = 14000; // Soft-cap: score = r^EXP / (1 + r^EXP / KNEE)
+const KNEE = 24000; // Soft-cap asymptote; raised from 14000 so elite ratings can project near a max salary (was structurally capping top Real Value well below max, making every max player look negative)
 const WM_WEIGHT = 0.92;
 const RAT_WEIGHT = 0.08;
 const AGE_MAX_BONUS = 0.85;
@@ -865,7 +865,7 @@ function setView(v){
   document.getElementById('tabTrade').classList.toggle('active', v==='trade');
   // default sort per view
   const sel = document.getElementById('sortSelect');
-  sel.value = v==='trade' ? 'contractTV-desc' : 'uncappedTV-desc';
+  sel.value = v==='trade' ? 'tvPerYear-desc' : 'uncappedTV-desc';
   update();
 }
 let snapshot = null;
