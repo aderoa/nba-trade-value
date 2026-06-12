@@ -156,6 +156,8 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
       <option value="uncappedTV-asc">Real Value ↑</option>
       <option value="contractTV-desc">Trade Value ↓</option>
       <option value="contractTV-asc">Trade Value ↑</option>
+      <option value="tvPerYear-desc">TV / Yr ↓</option>
+      <option value="tvPerYear-asc">TV / Yr ↑</option>
       <option value="surplus-desc">Surplus ↓</option>
       <option value="surplus-asc">Surplus ↑</option>
       <option value="watermark-desc">Watermark ↓</option>
@@ -200,6 +202,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
         <th style="text-align:center">Category</th>
         <th style="text-align:right">Surplus</th>
         <th style="text-align:right">Trade Value</th>
+        <th style="text-align:right" title="Trade Value annualized over all contract years (incl. options & non-guaranteed; excl. RFA projection)">TV / Yr</th>
         <th style="text-align:center">End</th>
       </tr>
     </thead>
@@ -223,7 +226,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
       <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × (1 + (min(2.5, (exp/act)^0.8) − 1) × ageFade) &nbsp;|&nbsp; ageFade = e<sup>-0.12(age-28)</sup> if age &gt; 28, else 1.0<br>
       <span class="step-label">Step 3</span>&nbsp; score(r) = r^3.2 ÷ (1 + r^3.2 / 14000) &nbsp;|&nbsp; TV<sub>WM</sub> = (score(WM) ÷ Σ) × Pool &nbsp;|&nbsp; TV<sub>RAT</sub> = (score(RAT365) ÷ Σ) × Pool<br>
       <span class="step-label">Step 4</span>&nbsp; TV<sub>blend</sub> = 92% × TV<sub>WM</sub> + 8% × TV<sub>RAT</sub><br>
-      <span class="step-label">Step 5</span>&nbsp; Defense SC/MPG adj (±1.5 WM pts) + Age factor (youth +85%, 35+ −3%/yr) → normalize to Pool<br>
+      <span class="step-label">Step 5</span>&nbsp; Defense adj (GR+ style: (def−avg)×0.2, uncapped) + Age factor (youth +85%, 35+ −3%/yr) → normalize to Pool<br>
       <span class="step-label">Step 6</span>&nbsp; Potential bonus = $25M × e<sup>-0.05(pick-1)</sup> × e<sup>-0.5(age-18.82)</sup> (under 25 only)<br>
       <span class="step-label">Step 7</span>&nbsp; Trade Value = Surplus<sub>25-26</sub> + Σ<sub>contract years</sub> ((RV ÷ Cap<sub>cur</sub>) × Cap<sub>proj</sub> × 0.95<sup>years out</sup> − Salary) + Σ<sub>RFA years</sub> (full projected − salary)
     </div>
@@ -528,14 +531,16 @@ function processData(rows, contractRows, defenseMapInput) {
     }
   }
 
-  // Defensive SC/MPG: additive bonus to watermark (compounds through 3.2 exponent)
-  // Up to ±3 watermark points based on SC/MPG vs league average
-  const DEF_MAX_BONUS = 1.5;
-  const defVals = Object.values(defenseMap);
+  // Defensive adjustment — matches the Global Rating Plus treatment:
+  // defAdj = (playerDef - leagueAvg) * DEF_WEIGHT, applied uncapped and added
+  // directly to the rating (GR+ uses 0.2 on its DEF_SCORE deviation). Good
+  // defenders gain, poor defenders lose, with no ±cap throttling the effect.
+  const DEF_WEIGHT = 0.2;
+  const defVals = Object.values(defenseMap).filter(v => typeof v === 'number' && v > 0);
   const defAvg = defVals.length ? defVals.reduce((s,v) => s+v, 0) / defVals.length : 0;
   for (const p of roster) {
     const playerDef = defenseMap[p.player] || 0;
-    p.defenseAdj = (defAvg > 0 && playerDef > 0) ? Math.max(-DEF_MAX_BONUS, Math.min(DEF_MAX_BONUS, (playerDef - defAvg) / defAvg * DEF_MAX_BONUS)) : 0;
+    p.defenseAdj = (defAvg > 0 && playerDef > 0) ? (playerDef - defAvg) * DEF_WEIGHT : 0;
     p.watermark += p.defenseAdj;
     p.rat365adj += p.defenseAdj;
   }
@@ -748,6 +753,23 @@ function processData(rows, contractRows, defenseMapInput) {
     p.contractTV = Math.round(tvSum);
   }
 
+  // Filter out players on expiring (2025-26) contracts — not tradeable — UNLESS
+  // they carry a 2026-27 Player or Team Option (still movable). Removed from the
+  // roster entirely so they drop out of the table AND the $0 normalization/pool.
+  {
+    const keep = [];
+    for (const p of roster) {
+      const c = contractMap[p.player];
+      const hasFutureYear = c && c.yrs && c.yrs.some(y => y.year >= 2027 && y.salary > 0);
+      const has2027Option = c && c.yrs && c.yrs.some(y => y.year === 2027 &&
+        (y.status.includes('PLAYER OPT') || y.status.includes('TEAM OPT')));
+      // Tradeable if the contract extends past 2025-26, or a 2026-27 option exists.
+      if (hasFutureYear || has2027Option) keep.push(p);
+    }
+    roster.length = 0;
+    Array.prototype.push.apply(roster, keep);
+  }
+
   // Normalize Trade Values so the league-wide sum = $0
   // Distribute the offset proportionally by |TV| so big values absorb more
   const rawTVTotal = roster.reduce((s, p) => s + p.contractTV, 0);
@@ -765,6 +787,14 @@ function processData(rows, contractRows, defenseMapInput) {
       }
     }
   }
+  // TV / Yr — annualized Trade Value over all contract years (current + every
+  // future signed/option/non-guaranteed year), EXCLUDING RFA projection years.
+  for (const p of roster) {
+    const yrsCount = (p.contractYears && p.contractYears.length) ? p.contractYears.length : 1;
+    p.tvPerYear = Math.round(p.contractTV / yrsCount);
+    p.contractYearsCount = yrsCount;
+  }
+
   // Pool = sum of capped real values
   const cappedPool = roster.reduce((s,p) => s + p.tradeValue, 0);
   // Rank by uncapped (real) value
@@ -886,6 +916,7 @@ function renderTable(players) {
       <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text2)'}">${p.category}</td>
       <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span>${s ? deltaHTML(p.surplus, s.surplus, false) : ''}</div></td>
       <td class="col-num wm-detail ${p.contractTV>0?'surplus-pos':p.contractTV<0?'surplus-neg':''}"><span style="font-weight:700">${p.contractTV!==0 ? ((p.contractTV>0?'+':'')+fmt$(p.contractTV)) : '—'}</span>${(p.contractYears.length || p.rfaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
+      <td class="col-num ${p.tvPerYear>0?'surplus-pos':p.tvPerYear<0?'surplus-neg':''}" style="font-weight:600">${p.contractTV!==0 ? ((p.tvPerYear>0?'+':'')+fmt$(p.tvPerYear)+'<span style=\'color:var(--text-muted);font-weight:400;font-size:0.7rem\'>/'+p.contractYearsCount+'y</span>') : '—'}</td>
       <td class="col-num" style="font-size:0.75rem;color:var(--text-muted)">${p.contractEnd >= 2027 ? p.contractEnd : 'EXP'}${p.rfaYears.length ? ' <span style="color:var(--accent-gold)">RFA</span>' : ''}${p.poDeclined ? ' <span style="color:var(--accent)">PO↗</span>' : ''}${p.toDeclined ? ' <span style="color:var(--surplus-neg)">TO✗</span>' : ''}</td>
     </tr>`;
   }).join('');
