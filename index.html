@@ -127,7 +127,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag">v4.4</span>
+      <span class="tag" id="verTag">v4.5</span>
     </div>
     <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
   </div>
@@ -233,10 +233,12 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings v4.4 — Live data via HoopsMatic API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings <span id="verFoot">v4.5</span> — Live data via HoopsMatic API</div>
 
 <script>
 // Data proxied through Worker — no Sheet IDs or API keys in client code
+const APP_VERSION = 'v4.5';
+console.log('[Real Value Rankings] build ' + APP_VERSION + ' — defense GR+ weighting, TV/Yr column, expiring filter');
 const PROXY_BASE = 'https://hoopsmatic.com';
 const RATINGS_URL = PROXY_BASE + '/api/rm-tv';
 const CONTRACT_URL = PROXY_BASE + '/api/rm-contracts';
@@ -944,6 +946,8 @@ function update() {
 }
 
 async function init() {
+  { const t=document.getElementById('verTag'); if(t)t.textContent=APP_VERSION;
+    const f=document.getElementById('verFoot'); if(f)f.textContent=APP_VERSION; }
   try {
     const [res, cRes, dRes] = await Promise.all([
       fetch(RATINGS_URL),
