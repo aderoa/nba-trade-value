@@ -104,7 +104,7 @@ tbody td { padding:0.55rem 0.5rem; vertical-align:middle; white-space:nowrap; }
 .surplus-bar.negative { right:50%; background:var(--surplus-neg); }
 .surplus-bar-center { position:absolute; left:50%; top:-1px; bottom:-1px; width:1px; background:rgba(0,0,0,0.1); }
 .wm-detail { position:relative; cursor:help; }
-.wm-detail .wm-tooltip { display:none; position:absolute; right:0; top:100%; margin-top:4px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.6rem 0.85rem; z-index:20; white-space:nowrap; font-size:0.72rem; color:var(--text2); line-height:1.7; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.wm-detail { position:relative; } .wm-detail .wm-tooltip { display:none; position:absolute; right:0; top:100%; margin-top:6px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.6rem 0.85rem; z-index:1000; white-space:nowrap; font-size:0.72rem; color:var(--text2); line-height:1.7; box-shadow:0 8px 24px rgba(0,0,0,0.18); text-align:left; pointer-events:none; } .wm-detail:hover { z-index:1001; }
 .wm-detail:hover .wm-tooltip { display:block; }
 .wm-tooltip .tt-label { color:var(--text-muted); }
 .wm-tooltip .tt-val { color:var(--text); font-weight:500; }
@@ -116,7 +116,7 @@ tbody td { padding:0.55rem 0.5rem; vertical-align:middle; white-space:nowrap; }
 .method-card code { font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--accent); background:var(--accent-dim); padding:0.15em 0.4em; border-radius:3px; }
 .formula-block { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:1rem 1.25rem; margin-top:1rem; font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--accent); line-height:1.8; }
 .formula-block .step-label { color:var(--text-muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; }
-tbody tr { animation:fadeInRow 0.25s ease both; }
+tbody tr { animation:fadeInRow 0.25s ease both; } tbody td { position:relative; }
 @keyframes fadeInRow { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 .snap-banner { max-width:1400px; margin:0.75rem auto 0; padding:0 2rem; }
 .snap-banner-inner { background:var(--accent-dim); border:1px solid rgba(59,130,246,0.15); border-radius:8px; padding:0.5rem 1rem; font-size:0.8rem; color:var(--accent); display:flex; align-items:center; gap:0.5rem; }
@@ -230,7 +230,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
     <p>An <strong style="color:var(--text)">age factor</strong> rewards youth and mildly penalizes age. Players below the league average age (~26.5) receive up to a 1.85× bonus scaling linearly to the youngest player. Players 35 and older receive a 3% penalty per year over 35 (floor 0.5×). Players between average and 35 are unaffected. After all adjustments, values are renormalized so the total still equals the salary pool.</p>
     <p>A <strong style="color:var(--accent-gold)">potential bonus</strong> (up to $25M) is added for players under 25, based on their draft position and age. Both factors use exponential decay: earlier draft picks and younger ages receive larger bonuses, with bigger gaps at the top (e.g., the difference between pick 1 and 2 is larger than between picks 59 and 60). Hover over the Age column to see the potential bonus breakdown.</p>
     <p>The distribution uses a <strong style="color:var(--accent-gold)">soft-capped exponent</strong> — <code>score = r^3.2 / (1 + r^3.2 / 14000)</code> — instead of a plain power curve. For mid-tier players, this behaves like a normal r^3.2 distribution, creating enough separation to push ~32 players above max-contract thresholds. For elite outliers, the denominator grows, compressing the very top so no player exceeds ~$95M. The total always equals the salary pool by construction.</p>
-    <p><strong style="color:var(--accent)">Trade Value</strong> measures a player's contract-adjusted worth, starting from the 2025-26 surplus. It takes the Real Value as a percentage of the current salary cap, then projects it forward for each remaining contract year using <strong>projected future caps</strong> and a <strong>5% per year wear-and-tear discount</strong> on signed contract years — reflecting the risk of being locked into a guaranteed salary. <strong>Player Options</strong>: if projected value exceeds option salary, the player declines (<span style="color:var(--accent)">PO↗</span>). <strong>Team Options</strong>: if option salary exceeds projected value, the team declines (<span style="color:var(--surplus-neg)">TO✗</span>). <strong>Restricted Free Agents</strong> (YOS ≤ 4 at contract end with positive surplus) get 3 projected years at market salary with 8% raises, at full value with no wear-and-tear (<span style="color:var(--accent-gold)">RFA</span>). The league-wide sum of all Trade Values is normalized to $0.</p>
+    <p><strong style="color:var(--accent)">Trade Value</strong> measures a player's contract-adjusted worth, anchored on the 2026-27 salary. It takes the Real Value as a percentage of the current salary cap, then projects it forward for each remaining contract year using <strong>projected future caps</strong> and a <strong>5% per year wear-and-tear discount</strong> on signed contract years — reflecting the risk of being locked into a guaranteed salary. <strong>Player Options</strong>: if projected value exceeds option salary, the player declines (<span style="color:var(--accent)">PO↗</span>). <strong>Team Options</strong>: if option salary exceeds projected value, the team declines (<span style="color:var(--surplus-neg)">TO✗</span>). <strong>Restricted Free Agents</strong> (YOS ≤ 4 at contract end with positive surplus) get 3 projected years at market salary with 8% raises, at full value with no wear-and-tear (<span style="color:var(--accent-gold)">RFA</span>). Trade Value is an <strong>absolute surplus</strong> — Real Value plus this contract adjustment, anchored on the 2026-27 salary — and is <strong>not</strong> renormalized, so a fairly-paid player sits near their Real Value, an underpaid deal above it, an overpaid deal below.</p>
     <div class="formula-block">
       <span class="step-label">Step 1</span>&nbsp; Watermark = Σ(weight × games × corrected RAT/g) ÷ Σ(weight × games) — time-decay per season<br>
       <span class="step-label">Step 2</span>&nbsp; Per-season GP correction: adj/g = raw/g × (1 + (min(2.5, (exp/act)^0.8) − 1) × ageFade) &nbsp;|&nbsp; ageFade = e<sup>-0.12(age-28)</sup> if age &gt; 28, else 1.0<br>
@@ -772,6 +772,14 @@ function processData(rows, contractRows, defenseMapInput) {
 
     // Trade Value = Real Value (performance base) + contract adjustment (the
     // multi-year surplus/deficit vs. the 2026-27-anchored contract).
+    // TEMP DEBUG: dump term-by-term TV for inspection (remove once tuned)
+    if (typeof window !== 'undefined' && window.__TV_DEBUG) {
+      console.log('TV ' + p.player + ' | RealValue=' + Math.round(p.uncappedTV).toLocaleString() +
+        ' | refSalary(2026-27)=' + refSalary.toLocaleString() +
+        ' | contractYears=' + JSON.stringify(p.contractYears.map(y=>({yr:y.year,sal:y.salary,surp:y.surplus,wt:y.wt,st:y.status}))) +
+        ' | rfaYears=' + p.rfaYears.length + ' | adj=' + Math.round(tvSum).toLocaleString() +
+        ' | TV=' + Math.round(p.uncappedTV + tvSum).toLocaleString());
+    }
     p.contractAdj = Math.round(tvSum);
     p.contractTV = Math.round(p.uncappedTV + tvSum);
   }
