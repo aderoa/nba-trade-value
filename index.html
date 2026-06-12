@@ -53,6 +53,11 @@ select:focus { border-color:var(--accent); }
 .ctrl-btn:hover:not(:disabled) { border-color:var(--accent); background:var(--accent-dim); }
 .ctrl-btn:disabled { opacity:0.4; cursor:default; }
 .ctrl-btn.active { border-color:var(--accent); background:var(--accent-dim); color:var(--accent); font-weight:600; }
+.view-tabs { display:flex; gap:0.5rem; max-width:var(--maxw,1400px); margin:0 auto 0.75rem; padding:0 1rem; }
+.view-tab { background:var(--surface); border:1px solid var(--border); border-bottom:2px solid transparent; border-radius:8px 8px 0 0; padding:0.55rem 1.25rem; color:var(--text-muted); font-family:inherit; font-size:0.9rem; font-weight:600; cursor:pointer; transition:all 0.15s; }
+.view-tab.active { color:var(--accent); border-color:var(--border); border-bottom-color:var(--accent); background:var(--accent-dim); }
+.view-tab:hover:not(.active) { color:var(--text); }
+.col-hide { display:none !important; }
 
 /* — Tables — */
 .table-container { max-width:1400px; margin:1.25rem auto 3rem; padding:0 2rem; overflow-x:auto; }
@@ -127,9 +132,9 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag" id="verTag">v4.5</span>
+      <span class="tag" id="verTag">v4.6</span>
     </div>
-    <p class="header-subtitle">Real Value (performance in a vacuum) + Trade Value (contract-adjusted surplus) — soft-capped exponent, projected salary caps</p>
+    <p class="header-subtitle">Two views: <strong>Real Value</strong> (performance in a vacuum — all players) and <strong>Trade Value</strong> (contract-adjusted surplus — tradeable players only, expiring deals excluded)</p>
   </div>
 </div>
 
@@ -181,6 +186,11 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="snap-banner-inner">📸 Snapshot locked — update your sheet, then hit <strong>Refresh</strong> to see changes</div>
 </div>
 
+<div class="view-tabs" id="viewTabs" style="display:none">
+  <button class="view-tab active" data-view="real" id="tabReal">Real Value</button>
+  <button class="view-tab" data-view="trade" id="tabTrade">Trade Value</button>
+</div>
+
 <div id="loadingArea">
   <div class="loading-overlay">
     <div class="spinner"></div>
@@ -198,11 +208,11 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
         <th style="text-align:right">RAT 365</th>
         <th style="text-align:right">Watermark</th>
         <th style="text-align:right">Salary</th>
-        <th style="text-align:right">Real Value</th>
-        <th style="text-align:center">Category</th>
-        <th style="text-align:right">Surplus</th>
-        <th style="text-align:right">Trade Value</th>
-        <th style="text-align:right" title="Trade Value annualized over all contract years (incl. options & non-guaranteed; excl. RFA projection)">TV / Yr</th>
+        <th style="text-align:right" data-col="real">Real Value</th>
+        <th style="text-align:center" data-col="real">Category</th>
+        <th style="text-align:right" data-col="real">Surplus</th>
+        <th style="text-align:right" data-col="trade">Trade Value</th>
+        <th style="text-align:right" data-col="trade" title="Trade Value annualized over all contract years (incl. options & non-guaranteed; excl. RFA projection)">TV / Yr</th>
         <th style="text-align:center">End</th>
       </tr>
     </thead>
@@ -233,12 +243,12 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings <span id="verFoot">v4.5</span> — Live data via HoopsMatic API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings <span id="verFoot">v4.6</span> — Live data via HoopsMatic API</div>
 
 <script>
 // Data proxied through Worker — no Sheet IDs or API keys in client code
-const APP_VERSION = 'v4.5';
-console.log('[Real Value Rankings] build ' + APP_VERSION + ' — defense GR+ weighting, TV/Yr column, expiring filter');
+const APP_VERSION = 'v4.6';
+console.log('[Real Value Rankings] build ' + APP_VERSION + ' — two views (Real Value / Trade Value), GR+ defense, TV/Yr');
 const PROXY_BASE = 'https://hoopsmatic.com';
 const RATINGS_URL = PROXY_BASE + '/api/rm-tv';
 const CONTRACT_URL = PROXY_BASE + '/api/rm-contracts';
@@ -755,37 +765,34 @@ function processData(rows, contractRows, defenseMapInput) {
     p.contractTV = Math.round(tvSum);
   }
 
-  // Filter out players on expiring (2025-26) contracts — not tradeable — UNLESS
-  // they carry a 2026-27 Player or Team Option (still movable). Removed from the
-  // roster entirely so they drop out of the table AND the $0 normalization/pool.
-  {
-    const keep = [];
-    for (const p of roster) {
-      const c = contractMap[p.player];
-      const hasFutureYear = c && c.yrs && c.yrs.some(y => y.year >= 2027 && y.salary > 0);
-      const has2027Option = c && c.yrs && c.yrs.some(y => y.year === 2027 &&
-        (y.status.includes('PLAYER OPT') || y.status.includes('TEAM OPT')));
-      // Tradeable if the contract extends past 2025-26, or a 2026-27 option exists.
-      if (hasFutureYear || has2027Option) keep.push(p);
-    }
-    roster.length = 0;
-    Array.prototype.push.apply(roster, keep);
+  // Tag tradeability WITHOUT removing anyone — Real Value must still include
+  // expiring players. A player is tradeable unless their deal ends in 2025-26,
+  // EXCEPT when they hold a 2026-27 Player/Team Option (still movable).
+  for (const p of roster) {
+    const c = contractMap[p.player];
+    const hasFutureYear = c && c.yrs && c.yrs.some(y => y.year >= 2027 && y.salary > 0);
+    const has2027Option = c && c.yrs && c.yrs.some(y => y.year === 2027 &&
+      (y.status.includes('PLAYER OPT') || y.status.includes('TEAM OPT')));
+    p.tradeable = !!(hasFutureYear || has2027Option);
   }
 
-  // Normalize Trade Values so the league-wide sum = $0
-  // Distribute the offset proportionally by |TV| so big values absorb more
-  const rawTVTotal = roster.reduce((s, p) => s + p.contractTV, 0);
-  if (Math.abs(rawTVTotal) > 0) {
-    const totalAbsTV = roster.reduce((s, p) => s + Math.abs(p.contractTV), 0);
-    if (totalAbsTV > 0) {
-      for (const p of roster) {
-        p.contractTV = Math.round(p.contractTV - rawTVTotal * (Math.abs(p.contractTV) / totalAbsTV));
-      }
-      // Fix rounding residual on largest absolute TV player
-      const finalSum = roster.reduce((s, p) => s + p.contractTV, 0);
-      if (finalSum !== 0) {
-        const maxP = roster.reduce((a, b) => Math.abs(a.contractTV) > Math.abs(b.contractTV) ? a : b);
-        maxP.contractTV -= finalSum;
+  // Normalize Trade Values so the league-wide sum = $0 — computed over the
+  // TRADEABLE subset only (expiring players aren't part of the trade market),
+  // so their presence never skews the tradeable players' normalized values.
+  {
+    const tradeables = roster.filter(p => p.tradeable);
+    const rawTVTotal = tradeables.reduce((s, p) => s + p.contractTV, 0);
+    if (Math.abs(rawTVTotal) > 0) {
+      const totalAbsTV = tradeables.reduce((s, p) => s + Math.abs(p.contractTV), 0);
+      if (totalAbsTV > 0) {
+        for (const p of tradeables) {
+          p.contractTV = Math.round(p.contractTV - rawTVTotal * (Math.abs(p.contractTV) / totalAbsTV));
+        }
+        const finalSum = tradeables.reduce((s, p) => s + p.contractTV, 0);
+        if (finalSum !== 0) {
+          const maxP = tradeables.reduce((a, b) => Math.abs(a.contractTV) > Math.abs(b.contractTV) ? a : b);
+          maxP.contractTV -= finalSum;
+        }
       }
     }
   }
@@ -807,6 +814,23 @@ function processData(rows, contractRows, defenseMapInput) {
 }
 
 let appData = null;
+let currentView = 'real';   // 'real' = all players + perf columns; 'trade' = tradeable only + contract columns
+function applyViewColumns(){
+  const showTrade = currentView === 'trade';
+  document.querySelectorAll('[data-col="real"]').forEach(el => el.classList.toggle('col-hide', showTrade));
+  document.querySelectorAll('.cell-real').forEach(el => el.classList.toggle('col-hide', showTrade));
+  document.querySelectorAll('[data-col="trade"]').forEach(el => el.classList.toggle('col-hide', !showTrade));
+  document.querySelectorAll('.cell-trade').forEach(el => el.classList.toggle('col-hide', !showTrade));
+}
+function setView(v){
+  currentView = v;
+  document.getElementById('tabReal').classList.toggle('active', v==='real');
+  document.getElementById('tabTrade').classList.toggle('active', v==='trade');
+  // default sort per view
+  const sel = document.getElementById('sortSelect');
+  sel.value = v==='trade' ? 'contractTV-desc' : 'uncappedTV-desc';
+  update();
+}
 let snapshot = null;
 
 function takeSnapshot() {
@@ -908,17 +932,17 @@ function renderTable(players) {
     const bc = p.surplus>=0?'positive':'negative';
     const s = snapshot ? snapshot[p.player] : null;
     return `<tr style="animation-delay:${Math.min(i*0.015,0.4)}s">
-      <td class="col-rank ${rankCls(p.rank)}">${p.rank}${s ? rankDelta(p.rank, s.rank) : ''}</td>
+      <td class="col-rank ${rankCls(p.viewRank||p.rank)}">${p.viewRank||p.rank}${s ? rankDelta(p.rank, s.rank) : ''}</td>
       <td class="col-player"><div class="player-name">${p.player}</div><div class="player-team">${p.team}</div></td>
       <td class="col-num wm-detail" style="color:${p.ageMult>=1?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.age!==null?p.age.toFixed(1):'—'}<div class="wm-tooltip"><span class="tt-label">Age mult:</span> <span class="tt-val">${p.ageMult.toFixed(3)}x</span><br><span class="tt-label">GP (cur):</span> <span class="tt-val">${p.curGames}/${p.expGames}</span><br><span class="tt-label">Games corr:</span> <span class="tt-val">${p.gamesCorr.toFixed(3)}x</span>${p.age !== null && p.age > GP_AGE_THRESHOLD ? `<br><span class="tt-label">GP age fade:</span> <span class="tt-val" style="color:var(--surplus-neg)">${Math.exp(-GP_AGE_DECAY * (p.age - GP_AGE_THRESHOLD)).toFixed(3)}x</span>` : ''}${p.shootingPenalty > 0 ? `<br><span class="tt-label">Shooting:</span> <span class="tt-val" style="color:var(--surplus-neg)">-${(p.shootingPenalty*100).toFixed(2)}%</span>` : ''}${p.defenseAdj !== 0 ? `<br><span class="tt-label">Defense SC/MPG:</span> <span class="tt-val" style="color:${p.defenseAdj>0?'var(--surplus-pos)':'var(--surplus-neg)'}">${p.defenseAdj>0?'+':''}${p.defenseAdj.toFixed(2)} WM pts</span>` : ''}${p.potentialBonus > 0 ? `<br><span class="tt-label">Potential:</span> <span class="tt-val" style="color:var(--accent-gold)">+${fmt$(p.potentialBonus)}</span>${p.draftPick ? ` <span class="tt-label">(#${p.draftPick} pick)</span>` : ''}` : ''}</div></td>
       <td class="col-num col-rat ${ratCls(p.rat365)}">${p.rat365.toFixed(2)}${s ? deltaHTML(p.rat365, s.rat365, false) : ''}</td>
       <td class="col-num col-rat wm-detail ${ratCls(p.watermark)}">${p.watermark.toFixed(2)}${s ? deltaHTML(p.watermark, s.watermark, false) : ''}<div class="wm-tooltip">${p.seasonInfo.map(s=>`<span class="tt-label">${s.year} (×${s.weight}):</span> <span class="tt-val">${s.avg.toFixed(1)}/g</span> ${s.games}gp`).join('<br>') || 'No data'}</div></td>
       <td class="col-num">${fmtFull$(p.salary)}</td>
-      <td class="col-num col-real-value">${fmtFullTV$(p.tradeValue)}${s ? deltaHTML(p.uncappedTV, s.tv, false) : ''}</td>
-      <td class="col-num" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text2)'}">${p.category}</td>
-      <td class="col-num col-surplus"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span>${s ? deltaHTML(p.surplus, s.surplus, false) : ''}</div></td>
-      <td class="col-num wm-detail ${p.contractTV>0?'surplus-pos':p.contractTV<0?'surplus-neg':''}"><span style="font-weight:700">${p.contractTV!==0 ? ((p.contractTV>0?'+':'')+fmt$(p.contractTV)) : '—'}</span>${(p.contractYears.length || p.rfaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
-      <td class="col-num ${p.tvPerYear>0?'surplus-pos':p.tvPerYear<0?'surplus-neg':''}" style="font-weight:600">${p.contractTV!==0 ? ((p.tvPerYear>0?'+':'')+fmt$(p.tvPerYear)+'<span style=\'color:var(--text-muted);font-weight:400;font-size:0.7rem\'>/'+p.contractYearsCount+'y</span>') : '—'}</td>
+      <td class="col-num col-real-value cell-real">${fmtFullTV$(p.tradeValue)}${s ? deltaHTML(p.uncappedTV, s.tv, false) : ''}</td>
+      <td class="col-num cell-real" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text2)'}">${p.category}</td>
+      <td class="col-num col-surplus cell-real"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span>${s ? deltaHTML(p.surplus, s.surplus, false) : ''}</div></td>
+      <td class="col-num wm-detail cell-trade ${p.contractTV>0?'surplus-pos':p.contractTV<0?'surplus-neg':''}"><span style="font-weight:700">${p.contractTV!==0 ? ((p.contractTV>0?'+':'')+fmt$(p.contractTV)) : '—'}</span>${(p.contractYears.length || p.rfaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
+      <td class="col-num cell-trade ${p.tvPerYear>0?'surplus-pos':p.tvPerYear<0?'surplus-neg':''}" style="font-weight:600">${p.contractTV!==0 ? ((p.tvPerYear>0?'+':'')+fmt$(p.tvPerYear)+'<span style=\'color:var(--text-muted);font-weight:400;font-size:0.7rem\'>/'+p.contractYearsCount+'y</span>') : '—'}</td>
       <td class="col-num" style="font-size:0.75rem;color:var(--text-muted)">${p.contractEnd >= 2027 ? p.contractEnd : 'EXP'}${p.rfaYears.length ? ' <span style="color:var(--accent-gold)">RFA</span>' : ''}${p.poDeclined ? ' <span style="color:var(--accent)">PO↗</span>' : ''}${p.toDeclined ? ' <span style="color:var(--surplus-neg)">TO✗</span>' : ''}</td>
     </tr>`;
   }).join('');
@@ -930,6 +954,7 @@ function update() {
   const team = document.getElementById('teamFilter').value;
   const [sortKey, sortDir] = document.getElementById('sortSelect').value.split('-');
   let f = appData.players.filter(p => {
+    if (currentView === 'trade' && !p.tradeable) return false;   // Trade view excludes expiring
     if (team && p.team !== team) return false;
     if (search && !p.player.toLowerCase().includes(search) && !p.team.toLowerCase().includes(search)) return false;
     return true;
@@ -942,7 +967,9 @@ function update() {
     if (bv === null) return -1;
     return (av - bv) * dir;
   });
+  f.forEach((p,i) => p.viewRank = i+1);
   renderTable(f);
+  applyViewColumns();
 }
 
 async function init() {
@@ -978,6 +1005,10 @@ async function init() {
     document.getElementById('searchInput').addEventListener('input', update);
     document.getElementById('teamFilter').addEventListener('change', update);
     document.getElementById('sortSelect').addEventListener('change', update);
+    document.getElementById('viewTabs').style.display = 'flex';
+    document.getElementById('tabReal').addEventListener('click', () => setView('real'));
+    document.getElementById('tabTrade').addEventListener('click', () => setView('trade'));
+    applyViewColumns();
     document.getElementById('snapshotBtn').disabled = false;
     document.getElementById('refreshBtn').disabled = false;
     document.getElementById('snapshotBtn').addEventListener('click', takeSnapshot);
