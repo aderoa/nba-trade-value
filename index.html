@@ -132,7 +132,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag" id="verTag">v4.7</span>
+      <span class="tag" id="verTag">v4.8</span>
     </div>
     <p class="header-subtitle">Two views: <strong>Real Value</strong> (performance in a vacuum — all players) and <strong>Trade Value</strong> (contract-adjusted surplus — tradeable players only, expiring deals excluded)</p>
   </div>
@@ -243,12 +243,12 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings <span id="verFoot">v4.7</span> — Live data via HoopsMatic API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings <span id="verFoot">v4.8</span> — Live data via HoopsMatic API</div>
 
 <script>
 // Data proxied through Worker — no Sheet IDs or API keys in client code
-const APP_VERSION = 'v4.7';
-console.log('[Real Value Rankings] build ' + APP_VERSION + ' — Trade Value = Real Value + contract adj, 2026-27 anchored');
+const APP_VERSION = 'v4.8';
+console.log('[Real Value Rankings] build ' + APP_VERSION + ' — Trade Value = absolute surplus (no $0 normalize), 2026-27 anchored');
 const PROXY_BASE = 'https://hoopsmatic.com';
 const RATINGS_URL = PROXY_BASE + '/api/rm-tv';
 const CONTRACT_URL = PROXY_BASE + '/api/rm-contracts';
@@ -787,26 +787,12 @@ function processData(rows, contractRows, defenseMapInput) {
     p.tradeable = !!(hasFutureYear || has2027Option);
   }
 
-  // Normalize Trade Values so the league-wide sum = $0 — computed over the
-  // TRADEABLE subset only (expiring players aren't part of the trade market),
-  // so their presence never skews the tradeable players' normalized values.
-  {
-    const tradeables = roster.filter(p => p.tradeable);
-    const rawTVTotal = tradeables.reduce((s, p) => s + p.contractTV, 0);
-    if (Math.abs(rawTVTotal) > 0) {
-      const totalAbsTV = tradeables.reduce((s, p) => s + Math.abs(p.contractTV), 0);
-      if (totalAbsTV > 0) {
-        for (const p of tradeables) {
-          p.contractTV = Math.round(p.contractTV - rawTVTotal * (Math.abs(p.contractTV) / totalAbsTV));
-        }
-        const finalSum = tradeables.reduce((s, p) => s + p.contractTV, 0);
-        if (finalSum !== 0) {
-          const maxP = tradeables.reduce((a, b) => Math.abs(a.contractTV) > Math.abs(b.contractTV) ? a : b);
-          maxP.contractTV -= finalSum;
-        }
-      }
-    }
-  }
+  // Trade Value is an ABSOLUTE surplus: Real Value (performance) plus the
+  // contract adjustment (value vs. money actually owed, 2026-27 anchored, with
+  // wear-and-tear / option / RFA logic). It is NOT re-normalized to $0 — doing
+  // so would double-count the pool normalization already baked into Real Value
+  // and bury low-rated players. A fair contract lands near Real Value; an
+  // underpaid deal above it; an overpaid deal below.
   // TV / Yr — annualized Trade Value over all contract years (current + every
   // future signed/option/non-guaranteed year), EXCLUDING RFA projection years.
   for (const p of roster) {
