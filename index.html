@@ -132,7 +132,7 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   <div class="header-inner">
     <div class="header-brand">
       <h1>NBA Real Value Rankings</h1>
-      <span class="tag" id="verTag">v4.6</span>
+      <span class="tag" id="verTag">v4.7</span>
     </div>
     <p class="header-subtitle">Two views: <strong>Real Value</strong> (performance in a vacuum — all players) and <strong>Trade Value</strong> (contract-adjusted surplus — tradeable players only, expiring deals excluded)</p>
   </div>
@@ -243,12 +243,12 @@ tbody tr { animation:fadeInRow 0.25s ease both; }
   </div>
 </div>
 
-<div class="footer">Hoopsmatic — NBA Real Value Rankings <span id="verFoot">v4.6</span> — Live data via HoopsMatic API</div>
+<div class="footer">Hoopsmatic — NBA Real Value Rankings <span id="verFoot">v4.7</span> — Live data via HoopsMatic API</div>
 
 <script>
 // Data proxied through Worker — no Sheet IDs or API keys in client code
-const APP_VERSION = 'v4.6';
-console.log('[Real Value Rankings] build ' + APP_VERSION + ' — two views (Real Value / Trade Value), GR+ defense, TV/Yr');
+const APP_VERSION = 'v4.7';
+console.log('[Real Value Rankings] build ' + APP_VERSION + ' — Trade Value = Real Value + contract adj, 2026-27 anchored');
 const PROXY_BASE = 'https://hoopsmatic.com';
 const RATINGS_URL = PROXY_BASE + '/api/rm-tv';
 const CONTRACT_URL = PROXY_BASE + '/api/rm-contracts';
@@ -705,18 +705,26 @@ function processData(rows, contractRows, defenseMapInput) {
     p.contractEnd = c.end;
     const capPct = p.uncappedTV / curCap; // Real Value as % of current cap
 
-    // Step 1: 2025-26 surplus (current season — no discount)
-    const surplus26 = p.uncappedTV - p.salary;
-    let tvSum = surplus26;
-    p.contractYears.push({ year: 2026, salary: p.salary, projVal: p.uncappedTV, surplus: surplus26, status: 'CURRENT', wt: 1.0 });
+    // Reference year is 2026-27: anchor the surplus on the 2026-27 salary (the
+    // actual figure a trade is built around next season), valued at full Real
+    // Value with no wear-and-tear. Players without a 2026-27 salary are expiring
+    // and are excluded from the Trade Value view anyway.
+    const ref = c.yrs.find(y => y.year === 2027);
+    const refSalary = ref ? ref.salary : p.salary;
+    const refProjCap = CAP_PROJ[2027] || curCap;
+    const refProjVal = Math.round(capPct * refProjCap);  // Real Value scaled to the 2026-27 cap
+    const surplusRef = refProjVal - refSalary;
+    let tvSum = surplusRef;
+    p.contractYears.push({ year: 2027, salary: refSalary, projVal: refProjVal, surplus: surplusRef, status: 'REFERENCE', wt: 1.0 });
 
-    // Step 2: Future contract years (2027+) with PO/TO detection and wear-and-tear
+    // Future contract years (2028+) with PO/TO detection and wear-and-tear,
+    // measured relative to the 2026-27 reference year.
     let effectiveEnd = c.end;
     for (const yr of c.yrs) {
-      if (yr.year < 2027) continue;
+      if (yr.year < 2028) continue;
       const projCap = CAP_PROJ[yr.year];
       if (!projCap) continue;
-      const yearsOut = yr.year - 2026;
+      const yearsOut = yr.year - 2027;
       const wtFactor = Math.pow(1 - WEAR_TEAR, yearsOut);
       const projVal = Math.round(capPct * projCap * wtFactor);
 
@@ -741,7 +749,7 @@ function processData(rows, contractRows, defenseMapInput) {
 
     // Step 3: RFA projection (3 years) — NO wear-and-tear (no contract signed yet = no risk)
     const yosAtEnd = c.yos + (effectiveEnd - 2025);
-    const isRFA = yosAtEnd <= 4 && surplus26 > 0;
+    const isRFA = yosAtEnd <= 4 && surplusRef > 0;
     if (isRFA) {
       const rfaStartYear = effectiveEnd + 1;
       const yosAtSigning = yosAtEnd + 1;
@@ -762,7 +770,10 @@ function processData(rows, contractRows, defenseMapInput) {
       }
     }
 
-    p.contractTV = Math.round(tvSum);
+    // Trade Value = Real Value (performance base) + contract adjustment (the
+    // multi-year surplus/deficit vs. the 2026-27-anchored contract).
+    p.contractAdj = Math.round(tvSum);
+    p.contractTV = Math.round(p.uncappedTV + tvSum);
   }
 
   // Tag tradeability WITHOUT removing anyone — Real Value must still include
@@ -941,7 +952,7 @@ function renderTable(players) {
       <td class="col-num col-real-value cell-real">${fmtFullTV$(p.tradeValue)}${s ? deltaHTML(p.uncappedTV, s.tv, false) : ''}</td>
       <td class="col-num cell-real" style="font-size:0.78rem;color:${p.capped?'var(--accent)':p.twoWay?'var(--surplus-neg)':p.floored?'var(--text-muted)':'var(--text2)'}">${p.category}</td>
       <td class="col-num col-surplus cell-real"><div class="surplus-cell"><div class="surplus-bar-track"><div class="surplus-bar-center"></div><div class="surplus-bar ${bc}" style="width:${pct}%"></div></div><span class="${surpCls(p.surplus)}">${p.surplus>=0?'+':''}${fmt$(p.surplus)}</span>${s ? deltaHTML(p.surplus, s.surplus, false) : ''}</div></td>
-      <td class="col-num wm-detail cell-trade ${p.contractTV>0?'surplus-pos':p.contractTV<0?'surplus-neg':''}"><span style="font-weight:700">${p.contractTV!==0 ? ((p.contractTV>0?'+':'')+fmt$(p.contractTV)) : '—'}</span>${(p.contractYears.length || p.rfaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
+      <td class="col-num wm-detail cell-trade ${p.contractTV>0?'surplus-pos':p.contractTV<0?'surplus-neg':''}"><span style="font-weight:700">${p.contractTV!==0 ? ((p.contractTV>0?'+':'')+fmt$(p.contractTV)) : '—'}</span>${(p.contractYears.length || p.rfaYears.length) ? `<div class="wm-tooltip">${p.contractYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}${y.status==='REFERENCE'?' ● (26-27 ref)':y.status==='CURRENT'?' ●':''}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal${y.wt !== undefined && y.wt !== 1 ? `, ${(y.wt*100).toFixed(0)}% wt` : ''})</span>`).join('<br>')}${p.poDeclined ? `<br><span class="tt-label" style="color:var(--accent)">⚡ PO declined (proj value > option)</span>` : ''}${p.toDeclined ? `<br><span class="tt-label" style="color:var(--surplus-neg)">✗ TO declined (salary > proj value)</span>` : ''}${p.rfaYears.length ? `<br><span class="tt-label" style="color:var(--accent-gold)">— RFA Projected (no w&t) —</span><br>${p.rfaYears.map(y=>`<span class="tt-label">${y.year}-${String(y.year+1).slice(2)}:</span> <span class="tt-val ${y.surplus>=0?'':'surplus-neg'}">${y.surplus>=0?'+':''}${fmt$(y.surplus)}</span> <span class="tt-label">(${fmt$(y.salary)} sal)</span>`).join('<br>')}` : ''}</div>` : ''}</td>
       <td class="col-num cell-trade ${p.tvPerYear>0?'surplus-pos':p.tvPerYear<0?'surplus-neg':''}" style="font-weight:600">${p.contractTV!==0 ? ((p.tvPerYear>0?'+':'')+fmt$(p.tvPerYear)+'<span style=\'color:var(--text-muted);font-weight:400;font-size:0.7rem\'>/'+p.contractYearsCount+'y</span>') : '—'}</td>
       <td class="col-num" style="font-size:0.75rem;color:var(--text-muted)">${p.contractEnd >= 2027 ? p.contractEnd : 'EXP'}${p.rfaYears.length ? ' <span style="color:var(--accent-gold)">RFA</span>' : ''}${p.poDeclined ? ' <span style="color:var(--accent)">PO↗</span>' : ''}${p.toDeclined ? ' <span style="color:var(--surplus-neg)">TO✗</span>' : ''}</td>
     </tr>`;
